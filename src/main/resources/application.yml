@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: osg
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DBURL}
+    username: ${DBUSER}
+    password: ${DBPWD}
+
+    hikari:
+      max-lifetime: 120000
+      idle-timeout: 60000
+      keepalive-time: 30000
+      minimum-idle: 2
+      maximum-pool-size: 5
+      connection-timeout: 30000
+
+  ai:
+    # 使用通用的 OpenAI 接口配置，指向 DeepSeek/Aliyun/其他厂商
+    openai:
+      base-url: https://api.siliconflow.cn/ #硅基流动
+      api-key: ${SILICONFLOW_API_KEY}
+      chat:
+        options:
+          model: Qwen/Qwen3-8B
+          temperature: 0.1
+          top_p: 0.95
+        enabled: true
+      embedding:
+        base-url: https://api.siliconflow.cn/
+        options:
+          model: BAAI/bge-large-zh-v1.5
+          dimensions: 1024
+        enabled: true
+
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 1024
+        initialize-schema: false
+  main:
+    allow-bean-definition-overriding: true
