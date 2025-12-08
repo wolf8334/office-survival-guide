@@ -3,6 +3,7 @@ package com.xhr.springai.officeSurvivalGuide.controller;
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
 import com.xhr.springai.officeSurvivalGuide.service.SQLExpertService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,12 +14,12 @@ import java.util.Map;
 @RestController()
 @RequestMapping("/api/sqlexpert")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class SQLExpertController {
 
     private static final Logger log = LoggerFactory.getLogger(SQLExpertController.class);
 
-    @Autowired
-    private SQLExpertService service;
+    private final SQLExpertService service;
 
     @PostMapping("/writeSQL")
     public Result<CommonData> writeSQL(@RequestBody Map<String, String> requirements) {

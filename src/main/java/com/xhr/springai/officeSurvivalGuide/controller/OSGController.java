@@ -3,6 +3,7 @@ package com.xhr.springai.officeSurvivalGuide.controller;
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
 import com.xhr.springai.officeSurvivalGuide.service.OSGService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,12 +14,12 @@ import java.util.Map;
 @RestController()
 @RequestMapping("/api/office")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class OSGController {
 
     private static final Logger log = LoggerFactory.getLogger(OSGController.class);
 
-    @Autowired
-    private OSGService service;
+    private final OSGService service;
 
     @PostMapping("/rag")
     public Result<CommonData> refreshKnowledge(@RequestBody Map<String, String> requirements) {
