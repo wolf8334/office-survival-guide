@@ -42,3 +42,7 @@ spring:
         initialize-schema: false
   main:
     allow-bean-definition-overriding: true
+
+custom:
+  coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
+  qwen-name: Qwen/Qwen3-8B

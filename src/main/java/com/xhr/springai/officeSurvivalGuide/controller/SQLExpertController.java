@@ -1,0 +1,30 @@
+package com.xhr.springai.officeSurvivalGuide.controller;
+
+import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
+import com.xhr.springai.officeSurvivalGuide.bean.Result;
+import com.xhr.springai.officeSurvivalGuide.service.SQLExpertService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController()
+@RequestMapping("/api/sqlexpert")
+@CrossOrigin(origins = "*")
+public class SQLExpertController {
+
+    private static final Logger log = LoggerFactory.getLogger(SQLExpertController.class);
+
+    @Autowired
+    private SQLExpertService service;
+
+    @PostMapping("/writeSQL")
+    public Result<CommonData> writeSQL(@RequestBody Map<String, String> requirements) {
+        String userRequirement = requirements.get("userRequirement");
+
+        log.info("用户输入是 {}",userRequirement);
+        return service.writeSomeSQL(userRequirement);
+    }
+}

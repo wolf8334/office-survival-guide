@@ -2,10 +2,10 @@ package com.xhr.springai.officeSurvivalGuide.service;
 
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
+import com.xhr.springai.officeSurvivalGuide.util.Chater;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,11 +13,8 @@ public class OSGService {
 
     private static final Logger log = LoggerFactory.getLogger(OSGService.class);
 
-    private final ChatClient chatClient;
-
-    public OSGService(ChatClient.Builder builder) {
-        this.chatClient = builder.build();
-    }
+    @Autowired
+    private Chater chater;
 
     public Result<CommonData> sayItBetter(String requirement) {
         //调用LLM 让他把表达美化一下
@@ -46,10 +43,31 @@ public class OSGService {
             requirement = "本来用户应该说点话让你转换的，但是什么也没说，你说几句告诉他要他先说你才能说。俏皮一点，可爱一点，撒娇卖萌也行，别说一大堆，十几二十个字就行。";
         }
 
-        String translated = chatClient.prompt().system(expansionPrompt).user(requirement).call().content();
+        String translated = chater.call(expansionPrompt, requirement);
 
         log.info("用户输入已扩展 {}", translated);
 
-        return new Result<>(new CommonData(requirement,translated));
+        return Result.success(requirement,translated);
+    }
+
+    public Result<CommonData> makeItPretty(String requirement) {
+        //调用LLM 让他把表达美化一下
+        String expansionPrompt = """
+                你是一位宣传口的工作者，文字功底深厚，能写出大段的漂亮文章，花团锦簇，要写的高大上，拔高立意，按照公文要求和格式生成。
+                
+                你的任务是将用户输入的大白话翻译成这样的文字，从朴实向花团锦簇提升。
+                
+                请直接输出润色后的内容，不要输出多余的解释。文字不要带换行，就一句话写完，格式用户自己调整。
+                """;
+
+        if (requirement.isBlank()){
+            requirement = "本来用户应该说点话让你转换的，但是什么也没说，你说几句告诉他要他先说你才能说。俏皮一点，可爱一点，撒娇卖萌也行，别说一大堆，十几二十个字就行。";
+        }
+
+        String translated = chater.call(expansionPrompt, requirement);
+
+        log.info("用户输入已扩展 {}", translated);
+
+        return Result.success(requirement,translated);
     }
 }
