@@ -24,7 +24,15 @@ public class OSGController {
     public Result<CommonData> refreshKnowledge(@RequestBody Map<String, String> requirements) {
         String userRequirement = requirements.get("userRequirement");
 
-        log.info("用户输入是 " + userRequirement);
+        log.info("用户输入是 {} ", userRequirement);
         return service.sayItBetter(userRequirement);
+    }
+
+    @PostMapping("/pretty")
+    public Result<CommonData> makeItPretty(@RequestBody Map<String, String> requirements) {
+        String userRequirement = requirements.get("userRequirement");
+
+        log.info("用户输入是 {} ", userRequirement);
+        return service.makeItPretty(userRequirement);
     }
 }
