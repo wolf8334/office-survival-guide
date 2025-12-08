@@ -3,18 +3,19 @@ package com.xhr.springai.officeSurvivalGuide.service;
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
 import com.xhr.springai.officeSurvivalGuide.util.Chater;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class OSGService {
 
     private static final Logger log = LoggerFactory.getLogger(OSGService.class);
 
-    @Autowired
-    private Chater chater;
+    private final Chater chater;
 
     public Result<CommonData> sayItBetter(String requirement) {
         //调用LLM 让他把表达美化一下
