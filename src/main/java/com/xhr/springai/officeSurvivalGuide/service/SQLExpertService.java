@@ -2,11 +2,10 @@ package com.xhr.springai.officeSurvivalGuide.service;
 
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
-import com.xhr.springai.officeSurvivalGuide.util.Coder;
+import com.xhr.springai.officeSurvivalGuide.util.LLMUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,7 +14,7 @@ public class SQLExpertService {
 
     private static final Logger log = LoggerFactory.getLogger(SQLExpertService.class);
 
-    private final Coder coder;
+    private final LLMUtil llm;
 
     public Result<CommonData> writeSomeSQL(String requirement) {
 
@@ -35,14 +34,8 @@ public class SQLExpertService {
                     explanation text,
                     created_at  timestamp default now()
                 );
-                
-                用户的需求是:
                 """;
 
-        String translated = coder.call(expansionPrompt, requirement);
-
-        log.info("生成的SQL是 {}", translated);
-
-        return Result.success(requirement,translated);
+        return llm.call(requirement,expansionPrompt);
     }
 }

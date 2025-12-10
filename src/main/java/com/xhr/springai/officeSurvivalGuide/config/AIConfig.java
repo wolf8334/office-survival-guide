@@ -14,7 +14,6 @@ public class AIConfig {
 
     private static final Logger log = LoggerFactory.getLogger(AIConfig.class);
 
-
     @Value("${custom.coder-name}")
     private String coderName;
 
@@ -23,9 +22,6 @@ public class AIConfig {
         return ChatClient.builder(chatModel);
     }
 
-    /**
-     * 基于DeepSeek的模型 逻辑好 会思考 但是也慢
-     */
     @Bean("coderClient")
     public ChatClient.Builder dsChatClient(ChatClient.Builder builder) {
         log.info("加载代码生成模型 {}", coderName);
