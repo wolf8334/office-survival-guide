@@ -6,7 +6,11 @@ import com.xhr.springai.officeSurvivalGuide.util.LLMUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,26 +20,49 @@ public class SQLExpertService {
 
     private final LLMUtil llm;
 
+    @Qualifier("tidbJdbcTemplate")
+    private final JdbcTemplate jdbcTemplate;
+
     public Result<CommonData> writeSomeSQL(String requirement) {
 
         if (null == requirement || requirement.isBlank()) {
             return Result.userNoInput();
         }
 
-        //调用LLM 让他把表达美化一下
         String expansionPrompt = """
-                你是一位SQL专家，擅长编写复杂SQL，请使用PG方言编写符合用户要求的语句。不要废话，直接编写就行， 输出语句不要包含换行，不要包括```sql这种内容。
+                # Role
+                        你是一个【表名提取器】
                 
-                已知的表结构如下：
-                create table sys_expert_rules
-                (
-                    id          serial primary key,
-                    keyword     varchar(2000),
-                    explanation text,
-                    created_at  timestamp default now()
-                );
+                        # Core Mission (核心任务)
+                        你的唯一任务是：从用户需求中分析出需要用到哪些表，并列出表名。
+                
+                        # Negative Constraints (绝对禁止)
+                        1. **严禁编写SQL语句**：不要输出 `SELECT`, `FROM`, `JOIN` 等任何SQL代码。
+                        2. **严禁废话**：不要解释为什么选这些表。
+                
+                        # Output Format (输出格式)
+                        仅输出纯文本的表名，一行一个。
+                
+                        # Workflow
+                        1. 阅读【已知表结构】。
+                        2. 理解【用户需求】。
+                        3. 在心里构建SQL（不要输出来！），确定用到了哪些表。
+                        4. 仅输出这些表的英文名。
+                        5. 回答之前，看看在不在给你的表清单里
+                        6. 输出用到的所有表
+                
+                        # Task Start
+                        【已知表清单】
                 """;
 
+        String tableInfoSQL = "SELECT concat('表名: ',table_name,',表内数据含义: ',table_comment) as str FROM information_schema.TABLES where table_schema = 'sakila'";
+
+        List<String> tableInfo = jdbcTemplate.queryForList(tableInfoSQL,String.class);
+        String tables = String.join("\n",tableInfo);
+
+        expansionPrompt += tables;
+
+        log.info("调用大模型，分析用到的表");
         return llm.call(requirement,expansionPrompt);
     }
 }

@@ -1,6 +1,5 @@
 package com.xhr.springai.officeSurvivalGuide.util;
 
-import com.xhr.springai.officeSurvivalGuide.controller.KnowledgeController;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,7 +7,6 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -24,7 +22,16 @@ public class VectorStoreUtil {
     private final VectorStore vectorStore;
 
     public void add(List<Document> documents){
-        vectorStore.add(documents);
+        int batchSize = 32;
+        for (int i = 0; i < documents.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, documents.size());
+            List<Document> batch = documents.subList(i, end);
+
+            vectorStore.add(batch);
+
+            log.info("已成功处理: {} / {}", end, documents.size());
+            // 如果 AI Farm 还有频率限制，可以在这里 Thread.sleep(200); 歇一下
+        }
     }
 
     public void accept(List<Document> documents) {

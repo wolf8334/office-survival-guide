@@ -44,13 +44,6 @@ public class OSGService {
     }
 
     public Result<CommonData> acknowledge(String requirement) {
-        String expansionPrompt = """
-                用户咨询公司制度相关的问题，请你根据公司相关规章制度和国家通用的规定和要求回答。
-                如果公司规定比国家的好，就采用公司的，否则以国家规定为准。
-                
-                【已知业务规则】：
-                %s
-                """;
-        return llm.callWithPurificationAndKnowledge(requirement,expansionPrompt);
+        return llm.callWithPurificationAndKnowledgeRerank(requirement);
     }
 }
