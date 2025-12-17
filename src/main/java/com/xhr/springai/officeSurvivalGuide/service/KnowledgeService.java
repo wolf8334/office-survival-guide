@@ -25,7 +25,7 @@ public class KnowledgeService {
     public void refreshKnowledgeBase() {
         log.info("开始执行专家知识库全量刷新任务");
 
-        String selectSql = "SELECT keyword,explanation FROM public.sys_expert_rules";
+        String selectSql = "SELECT distinct keyword,explanation FROM public.sys_expert_rules";
         List<Map<String, Object>> sourceData = jdbcTemplate.queryForList(selectSql);
 
         if (sourceData.isEmpty()) {
