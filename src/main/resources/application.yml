@@ -2,12 +2,20 @@ spring:
   application:
     name: osg
 
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: ${DBURL}
-    username: ${DBUSER}
-    password: ${DBPWD}
+  main:
+    allow-bean-definition-overriding: true
 
+  datasource:
+    pg:
+      driver-class-name: org.postgresql.Driver
+      jdbcUrl: ${DBURL}
+      username: ${DBUSER}
+      password: ${DBPWD}
+    tidb:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbcUrl: ${TiDBURL}
+      username: ${TiDBUSER}
+      password: ${TiDBPWD}
     hikari:
       max-lifetime: 120000
       idle-timeout: 60000
@@ -33,15 +41,12 @@ spring:
           model: BAAI/bge-large-zh-v1.5
           dimensions: 1024
         enabled: true
-
     vectorstore:
       pgvector:
-        index-type: HNSW
-        distance-type: COSINE_DISTANCE
         dimensions: 1024
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
         initialize-schema: false
-  main:
-    allow-bean-definition-overriding: true
 
 custom:
   coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
