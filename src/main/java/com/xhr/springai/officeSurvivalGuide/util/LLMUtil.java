@@ -2,7 +2,6 @@ package com.xhr.springai.officeSurvivalGuide.util;
 
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
-import com.xhr.springai.officeSurvivalGuide.service.KnowledgeService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LLMUtil {
 
-    private static final Logger log = LoggerFactory.getLogger(KnowledgeService.class);
+    private static final Logger log = LoggerFactory.getLogger(LLMUtil.class);
 
     private final Chater chater;
     private final VectorStoreUtil vectorStore;
