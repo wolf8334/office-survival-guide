@@ -40,11 +40,11 @@ public class NoiseKnowledegeMaker {
                 if (i <= 30) {
                     // 前30条使用精心准备的“陷阱”数据
                     int idx = i % demoCases.length;
-                    keyword = demoCases[idx][0] + "_" + i;
+                    keyword = demoCases[idx][0];
                     explanation = demoCases[idx][1];
                 } else {
                     // 剩下的 9970 条生成看起来很专业的“业务噪音”
-                    keyword = industries[random.nextInt(industries.length)] + "_规约_" + i;
+                    keyword = industries[random.nextInt(industries.length)] + "_规约";
                     explanation = descriptions[random.nextInt(descriptions.length)]
                             + " 关联编号: " + (100000 + i)
                             + "。该内容用于系统基准测试，确保在高压力环境下检索的稳定性。";
