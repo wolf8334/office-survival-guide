@@ -6,11 +6,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 @Service
-public class Coder implements ICaller {
+public class Reranker implements ICaller {
 
     private final ChatClient chatClient;
 
-    public Coder(@Qualifier("coderClient") ChatClient client) {
+    public Reranker(@Qualifier("rerankClient") ChatClient client) {
         this.chatClient = client;
     }
 
@@ -22,6 +22,6 @@ public class Coder implements ICaller {
     }
 
     public String call(String expansionPrompt){
-        return chatClient.prompt(expansionPrompt).call().content();
+        return chatClient.prompt().system(expansionPrompt).user("请开始").call().content();
     }
 }

@@ -33,4 +33,11 @@ public class KnowledgeController {
         knowledgeService.addKnowledgeBase(knowledgeBase);
         return Result.success("","专家知识添加完毕");
     }
+
+    @PostMapping("/acquireKeyword")
+    public Result<CommonData> acquireKeyword() {
+        log.info("更新专家库的关键字 ");
+        knowledgeService.acquireKeyword();
+        return Result.success("","专家关键字更新完毕");
+    }
 }
