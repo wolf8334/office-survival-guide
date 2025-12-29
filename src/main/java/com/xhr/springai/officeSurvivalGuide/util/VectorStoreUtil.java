@@ -22,7 +22,7 @@ public class VectorStoreUtil {
     private final VectorStore vectorStore;
 
     public void add(List<Document> documents){
-        int batchSize = 32;
+        int batchSize = 50;
         for (int i = 0; i < documents.size(); i += batchSize) {
             int end = Math.min(i + batchSize, documents.size());
             List<Document> batch = documents.subList(i, end);
@@ -30,7 +30,6 @@ public class VectorStoreUtil {
             vectorStore.add(batch);
 
             log.info("已成功处理: {} / {}", end, documents.size());
-            // 如果 AI Farm 还有频率限制，可以在这里 Thread.sleep(200); 歇一下
         }
     }
 
