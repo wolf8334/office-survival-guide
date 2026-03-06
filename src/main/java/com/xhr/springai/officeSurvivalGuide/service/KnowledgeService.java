@@ -7,13 +7,15 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import javax.sql.DataSource;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +33,9 @@ public class KnowledgeService {
     private final VectorStoreUtil vectorStore;
     private final Chater chater;
     private final JSONUtil json;
+
+    @Qualifier("tidbDataSource")
+    private final DataSource ds2;
 
 
     public void refreshKnowledgeBase() {
@@ -194,38 +199,141 @@ public class KnowledgeService {
         log.info("专家知识库添加完毕 " + knowledgeBase);
     }
 
-    @Scheduled(fixedDelay = 60000)
-    private void refreshVectorStore(){
+    @Scheduled(fixedDelay = 60000 * 10)
+    private void refreshVectorStore() throws SQLException{
         // 查询未向量化的数据
         String sql = "select id,keyword,explanation from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM vector_store) and keyword is not null and keyword != ''";
         String vector = "delete from vector_store where content in (select keyword from public.sys_expert_rules where keyword is not null group by keyword having count(1) > 1)";
         String expertRule = "UPDATE sys_expert_rules a set KEYWORD = null WHERE KEYWORD IN (SELECT keyword FROM sys_expert_rules WHERE keyword IS NOT NULL GROUP BY keyword HAVING count(1) > 1)";
 
+        String refreshDBInfo = "delete from vector_store where content like '表名%'";
+
         List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
+        List<Document> documents = new ArrayList<>();
 
         if (!list.isEmpty()) {
-            List<Document> documents = list.stream().filter(row -> row.get("keyword") != null && !row.get("keyword").toString().isBlank()).map(row -> {
+            documents = new ArrayList<>(list.stream().filter(row -> row.get("keyword") != null && !row.get("keyword").toString().isBlank()).map(row -> {
                 String keyword = (String) row.get("keyword");
                 Integer id = (Integer) row.get("id");
                 String explanation = (String) row.get("explanation");
 
-                Map<String, Object> metadata = new HashMap<>();
-                metadata.put("keyword", keyword);
-                metadata.put("id", id);
-
-                String combinedContent = String.format("主题：{%s}。详细内容：{%s}", keyword, explanation);
+                String combinedContent = String.format("主题：%s。详细内容：%s", keyword, explanation);
 
                 return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation));
-            }).toList();
-
-            long start = System.currentTimeMillis();
-            vectorStore.add(documents);
-
-            jdbcTemplate.execute(vector);
-            jdbcTemplate.execute(expertRule);
-
-            log.info("向量库刷新成功。共处理字段: {} 条, Embedding 耗时: {} ms", documents.size(), (System.currentTimeMillis() - start));
+            }).toList());
         }
+
+        documents.addAll(indexTables());
+
+        // 2 刷新数据库表结构信息到向量库
+        long start = System.currentTimeMillis();
+
+        //清除向量库中的表结构信息
+        jdbcTemplate.execute(refreshDBInfo);
+
+        //更新知识库中未向量化的内容
+        vectorStore.add(documents);
+
+        //删除重复数据
+        jdbcTemplate.execute(vector);
+        jdbcTemplate.execute(expertRule);
+
+        log.info("向量库刷新成功。共处理字段: {} 条, Embedding 耗时: {} ms", documents.size(), (System.currentTimeMillis() - start));
+    }
+
+    private List<Document> indexTables() throws SQLException {
+        List<Document> list = new ArrayList<>();
+
+        Connection conn = ds2.getConnection();
+        DatabaseMetaData metaData = conn.getMetaData();
+        String currentDb = conn.getCatalog();
+
+        // 1. 获取所有表
+        ResultSet tables = metaData.getTables(currentDb, null, "%", new String[]{"TABLE"});
+
+        while (tables.next()) {
+            String tableName = tables.getString("TABLE_NAME");
+            String tableRemarks = tables.getString("REMARKS"); // 获取表注释
+
+            if (tableRemarks.isBlank()) continue;
+
+            // 2. 获取该表的所有字段和注释
+            ResultSet columns = metaData.getColumns(null, null, tableName, "%");
+            StringBuilder columnInfo = new StringBuilder();
+            while (columns.next()) {
+                columnInfo.append(columns.getString("COLUMN_NAME"));
+
+                if (!columns.getString("REMARKS").isBlank()){
+                    //字段注释
+                    columnInfo.append("(").append(columns.getString("REMARKS")).append(") ");
+                }
+
+                columnInfo.append(",");
+            }
+
+            // 3. 获取外键关系（关联关系自动提取）
+            ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName);
+            StringBuilder fkInfo = new StringBuilder();
+            while (foreignKeys.next()) {
+                fkInfo.append(tableName).append("通过")
+                        .append(foreignKeys.getString("FKCOLUMN_NAME"))
+                        .append("关联").append(foreignKeys.getString("PKTABLE_NAME")).append("; ");
+            }
+
+            String tableIdentity = String.format(
+                    "表名：%s；含义：%s；字段：%s；关联关系：%s",
+                    tableName, tableRemarks, columnInfo, fkInfo
+            );
+
+            log.debug(tableIdentity);
+
+            list.add(new Document(tableIdentity, Map.of("ddl", getTableDDL(tableName,conn))));
+        }
+
+        log.info("刷新了{}条数据库信息", list.size());
+
+        return list;
+    }
+
+    private String getTableDDL(String tableName, Connection conn) throws SQLException {
+        DatabaseMetaData metaData = conn.getMetaData();
+        StringBuilder ddl = new StringBuilder("CREATE TABLE " + tableName + " (");
+
+        // 1. 获取所有列信息
+        try (ResultSet columns = metaData.getColumns(null, null, tableName, "%")) {
+            while (columns.next()) {
+                String columnName = columns.getString("COLUMN_NAME");
+                String typeName = columns.getString("TYPE_NAME");
+                int columnSize = columns.getInt("COLUMN_SIZE");
+                String remarks = columns.getString("REMARKS"); // 这是最重要的：字段注释
+
+                ddl.append("  ").append(columnName).append(" ").append(typeName);
+                if (columnSize > 0 && !typeName.contains("text") && !typeName.contains("int")) {
+                    ddl.append("(").append(columnSize).append(")");
+                }
+
+                // 把注释直接作为 SQL 注释写在后面，AI 看得最明白
+                if (remarks != null && !remarks.isEmpty()) {
+                    ddl.append(" -- ").append(remarks);
+                }
+                ddl.append(",");
+            }
+        }
+
+        // 2. 获取主键信息（可选，有助于 AI 理解唯一性）
+        try (ResultSet primaryKeys = metaData.getPrimaryKeys(null, null, tableName)) {
+            while (primaryKeys.next()) {
+                ddl.append("  PRIMARY KEY (").append(primaryKeys.getString("COLUMN_NAME")).append("),\n");
+            }
+        }
+
+        // 去掉最后一个逗号并闭合
+        if (ddl.charAt(ddl.length() - 2) == ',') {
+            ddl.deleteCharAt(ddl.length() - 2);
+        }
+        ddl.append(");");
+
+        return ddl.toString();
     }
 }
 
