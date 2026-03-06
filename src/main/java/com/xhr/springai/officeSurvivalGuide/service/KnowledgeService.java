@@ -75,16 +75,21 @@ public class KnowledgeService {
         }
     }
 
+    public List<Map<String,Object>> list(){
+        String sql = "SELECT * FROM sys_expert_rules order by id";
+        return jdbcTemplate.queryForList(sql);
+    }
+
     /**
      * 从sys_expert_rule中获取keyword为空的数据，从大模型获取关键字并填充
      * */
     public void acquireKeyword(){
-        String sql = "select id,left(explanation,2000) as explanation from sys_expert_rules where keyword is null";
+        String sql = "select id,left(explanation,2000) as explanation from sys_expert_rules where category is null";
         List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
 
         log.info("查询到{}条待更新知识库",list.size());
 
-        int batchSize = 2;
+        int batchSize = 1;
 
         try (var executor = Executors.newFixedThreadPool(10)) {
             for (int i = 0; i < list.size(); i += batchSize) {
@@ -105,13 +110,36 @@ public class KnowledgeService {
                                 .collect(Collectors.joining("\n"));
 
                         String prompt = """
-                    请提取以下每段内容的关键词。
-                    严格按 JSON 格式返回数组：[{"id": "ID_数字", "keyword": "关键词1, 关键词2"}, ...]
-                    唯一性检查：输出前必须检查 keywords 列表，严禁出现重复项。
+                    请提取以下每段内容的依据国民经济行业分类标准的对应的门类代码，返回内容仅包含门类代码，不包含代码名称。
+                    严格按 JSON 格式返回数组：[{"id": "ID_数字", "keyword": "门类代码"}, ...]
                     格式约束：仅返回标准 JSON，严禁任何解释性文字。
-                    返回内容不要笼统，要能体现实际词条内容，不要只输出条目词，要体现原有词条含义。
-                    在返回 JSON 前，请检查提取的关键词是否与原文描述的业务领域相符。如果不符，请重新提取。
+                    在返回 JSON 前，请检查提取的门类代码是否与原文描述的业务领域相符。如果不符，请重新提取。
                     不允许输出 ```json 这种格式的，直接返回json内容
+                    
+                    游戏和娱乐新闻都是娱乐业
+                    
+                    门类代码	门类代码名称
+                    A	    农、林、牧、渔业
+                    B	    采矿业
+                    C	    制造业
+                    D	    电力、燃气及水的生产和供应业
+                    E	    建筑业
+                    F	    交通运输、仓储和邮政业
+                    G	    信息传输、计算机服务和软件业
+                    H	    批发和零售业
+                    I	    住宿和餐饮业
+                    J	    金融业
+                    K	    房地产业
+                    L	    租赁和商务服务业
+                    M	    科学研究、技术服务和地质勘查业
+                    N	    水利、环境和公共设施管理业
+                    O	    居民服务和其他服务业
+                    P	    教育
+                    Q	    卫生、社会保障和社会福利业
+                    R	    文化、体育和娱乐业
+                    S	    公共管理和社会组织
+                    T	    国际组织
+                    
                     内容如下：
                     """ + promptInfo;
 
@@ -124,7 +152,7 @@ public class KnowledgeService {
 
                         // 6. 批量更新数据库 (Batch Update)
                         jdbcTemplate.batchUpdate(
-                                "UPDATE sys_expert_rules SET keyword = ?,created_at = now()::timestamp AT TIME ZONE 'UTC+8' WHERE id = ?",
+                                "UPDATE sys_expert_rules SET category = ?,created_at = now()::timestamp AT TIME ZONE 'UTC+8' WHERE id = ?",
                                 new BatchPreparedStatementSetter() {
                                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                                         var item = results.get(i);
@@ -159,8 +187,6 @@ public class KnowledgeService {
         String sql = "INSERT into sys_expert_rules (keyword,explanation) values ('" + keyword + "','" + explanation + "')";
         jdbcTemplate.execute(sql);
 
-        // 把这条知识灌入向量库,加上特殊的 Metadata，标记这是“专家规则”
-        // 格式：【专家业务规则】关键词：设备状态，逻辑含义：设备状态是指DEVICE表的STATUS
         String content = String.format("【业务规则】关键词：%s。详细定义：%s", keyword, explanation);
 
         Document doc = new Document(content, Map.of("type", "RULE"));
@@ -171,7 +197,7 @@ public class KnowledgeService {
     @Scheduled(fixedDelay = 60000)
     private void refreshVectorStore(){
         // 查询未向量化的数据
-        String sql = "select id,keyword from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM vector_store) and keyword is not null and keyword != ''";
+        String sql = "select id,keyword,explanation from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM vector_store) and keyword is not null and keyword != ''";
         String vector = "delete from vector_store where content in (select keyword from public.sys_expert_rules where keyword is not null group by keyword having count(1) > 1)";
         String expertRule = "UPDATE sys_expert_rules a set KEYWORD = null WHERE KEYWORD IN (SELECT keyword FROM sys_expert_rules WHERE keyword IS NOT NULL GROUP BY keyword HAVING count(1) > 1)";
 
@@ -181,12 +207,15 @@ public class KnowledgeService {
             List<Document> documents = list.stream().filter(row -> row.get("keyword") != null && !row.get("keyword").toString().isBlank()).map(row -> {
                 String keyword = (String) row.get("keyword");
                 Integer id = (Integer) row.get("id");
+                String explanation = (String) row.get("explanation");
 
                 Map<String, Object> metadata = new HashMap<>();
                 metadata.put("keyword", keyword);
                 metadata.put("id", id);
 
-                return new Document(keyword, metadata);
+                String combinedContent = String.format("主题：{%s}。详细内容：{%s}", keyword, explanation);
+
+                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation));
             }).toList();
 
             long start = System.currentTimeMillis();

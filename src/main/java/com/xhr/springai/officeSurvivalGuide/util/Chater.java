@@ -8,6 +8,7 @@ import org.springframework.ai.chat.metadata.Usage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 @Service
 public class Chater implements ICaller {
@@ -20,14 +21,14 @@ public class Chater implements ICaller {
         this.chatClient = client;
     }
 
-    public String call(String expansionPrompt,String requirement){
-        if (requirement == null || requirement.isBlank()){
-            return this.call(expansionPrompt,"请开始");
+    public String call(String expansionPrompt, String requirement) {
+        if (requirement == null || requirement.isBlank()) {
+            return this.call(expansionPrompt, "请开始");
         }
         return chatClient.prompt().system(expansionPrompt).user(requirement).call().content();
     }
 
-    public String call(String expansionPrompt){
+    public String call(String expansionPrompt) {
         // 1. 获取完整的 Response 对象
         ChatResponse response = chatClient.prompt().user(expansionPrompt).call().chatResponse(); // 注意这里换成 chatResponse()
 
@@ -43,7 +44,11 @@ public class Chater implements ICaller {
                     promptTokens, completionTokens, totalTokens);
         }
 
-        // 3. 拿到你原来的 JSON 字符串继续解析
+        // 3. 拿到原来的 JSON 字符串继续解析
         return response.getResult().getOutput().getText();
+    }
+
+    public Flux<String> callFlux(String vectorResult, String afterPurified) {
+        return chatClient.prompt().user(u -> u.text(" 背景知识：{context} 用户问题：{query}").param("context", vectorResult).param("query", afterPurified)).stream().content();
     }
 }
