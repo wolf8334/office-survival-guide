@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController()
@@ -39,5 +40,11 @@ public class KnowledgeController {
         log.info("更新专家库的关键字 ");
         knowledgeService.acquireKeyword();
         return Result.success("","专家关键字更新完毕");
+    }
+
+    @GetMapping("/list")
+    public Result<List<Map<String, Object>>> list() {
+        log.info("查询专家库关键字 ");
+        return Result.success(knowledgeService.list());
     }
 }

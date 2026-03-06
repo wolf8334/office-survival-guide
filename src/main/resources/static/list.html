@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>知识库列表 - 管理后台</title>
+    <style>
+        /* --- 粘贴刚才给你的全能通用样式 --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .nav-header {
+            background: #001529;
+            color: white;
+            padding: 0 20px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.65);
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+        }
+
+        .nav-links a.active {
+            color: white;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 25px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #1f1f1f;
+            border-left: 4px solid #1890ff;
+            padding-left: 15px;
+            font-size: 20px;
+        }
+
+        /* --- 列表特有样式 --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+
+        .data-table th, .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: left;
+            word-break: break-all;
+        }
+
+        .data-table th {
+            background: #fafafa;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .data-table tr:hover {
+            background: #e6f7ff;
+            transition: background 0.3s;
+        }
+
+        .keyword-tag {
+            background: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+<div class="nav-header">
+    <strong>知识库管理系统</strong>
+    <div class="nav-links">
+        <a href="entry.html">录入</a>
+        <a class="active" href="list.html">列表</a>
+        <a href="chat.html">问答</a>
+    </div>
+</div>
+
+<div class="container">
+    <h2>已录入知识点</h2>
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th style="width: 80px;">ID</th>
+            <th style="width: 200px;">关键字</th>
+            <th>详细内容内容</th>
+        </tr>
+        </thead>
+        <tbody id="tbody">
+        <tr>
+            <td colspan="3" style="text-align:center;">数据加载中...</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function loadData() {
+        try {
+            const res = await fetch(`/knowledges/list?k=${Math.random()}`);
+            const result = await res.json(); // 此时 result 是整个 JSON 对象
+            const list = result.data;
+
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = list.map(item => `
+            <tr>
+                <td>${item.id}</td>
+                <td><span class="keyword-tag">${item.keyword}</span></td>
+                <td style="color: #666; font-size: 14px;">${item.explanation}</td> </tr>
+        `).join('');
+        } catch (e) {
+            console.error(e);
+            document.getElementById('tbody').innerHTML = '<tr><td colspan="3" style="color:red; text-align:center;">数据解析失败</td></tr>';
+        }
+    }
+
+    loadData();
+</script>
+</body>
+</html>

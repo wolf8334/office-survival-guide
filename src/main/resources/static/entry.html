@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>关键词录入</title>
+    <style>
+        /* --- 基础重置 --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* --- 顶部导航栏 --- */
+        .nav-header {
+            background: #001529;
+            color: white;
+            padding: 0 20px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .nav-links a {
+            color: rgba(255,255,255,0.65);
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover, .nav-links a.active {
+            color: white;
+        }
+
+        /* --- 主容器 --- */
+        .container {
+            max-width: 1000px;
+            margin: 25px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #1f1f1f;
+            font-weight: 500;
+            border-left: 4px solid #1890ff;
+            padding-left: 15px;
+        }
+
+        /* --- 表单元素（解决你说的字体和框不一样的问题） --- */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        /* 继承字体、统一边框、内阴影 */
+        input[type="text"],
+        textarea {
+            width: 100%;
+            font-family: inherit;
+            font-size: 14px;
+            padding: 10px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #40a9ff;
+            box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical; /* 允许垂直拉伸，不破坏布局 */
+        }
+
+        /* --- 按钮样式 --- */
+        button {
+            font-family: inherit;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #1890ff;
+            color: white;
+            padding: 8px 20px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #40a9ff;
+        }
+
+        button:disabled {
+            background: #f5f5f5;
+            color: rgba(0,0,0,0.25);
+            cursor: not-allowed;
+        }
+
+        /* --- 数据表格样式 --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #fafafa;
+            font-weight: 500;
+        }
+
+        .data-table tr:hover {
+            background: #fafafa;
+        }
+
+        /* --- 对话框专有样式 --- */
+        #chat-window {
+            height: 500px;
+            overflow-y: auto;
+            border: 1px solid #f0f0f0;
+            background: #f9f9f9;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .msg-item {
+            margin-bottom: 15px;
+            display: flex;
+        }
+
+        .msg-item.user { justify-content: flex-end; }
+
+        .msg-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .user .msg-bubble { background: #91d5ff; color: #002766; }
+        .ai .msg-bubble { background: white; border: 1px solid #d9d9d9; }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+<div class="nav-header">
+    <strong>知识库管理系统</strong>
+    <div class="nav-links">
+        <a class="active" href="entry.html">录入</a>
+        <a href="list.html">列表</a>
+        <a href="chat.html">问答</a>
+    </div>
+</div>
+<div class="container">
+    <h2>录入关键字内容</h2>
+    <div class="form-group">
+        <label>关键字</label>
+        <label for="keyword">
+            <input id="keyword" placeholder="请输入关键字" type="text">
+        </label>
+    </div>
+    <div class="form-group">
+        <label>内容</label>
+        <label for="explanation">
+            <textarea id="explanation" placeholder="请输入名词解释"></textarea>
+        </label>
+    </div>
+    <button onclick="submitData()">提交保存</button>
+</div>
+
+<script>
+    async function submitData() {
+        const keyword = document.getElementById('keyword').value;
+        const explanation = document.getElementById('explanation').value;
+        if (!keyword || !explanation) return alert('请填全内容');
+
+        try {
+            const res = await fetch('/knowledges/addKnowledge', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({keyword: keyword, explanation: explanation})
+            });
+            if (res.ok) {
+                alert('保存成功！');
+                document.getElementById('keyword').value = '';
+                document.getElementById('explanation').value = '';
+            }
+        } catch (e) {
+            alert('提交失败，请检查后端');
+        }
+    }
+</script>
+</body>
+</html>

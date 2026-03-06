@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,26 +38,31 @@ public class LLMUtil {
         log.info(Arrays.toString(vector));
 
         // 2 查询向量库，搜索相关内容
-        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, 10);
-
-        String knowledgeContext = "";
-        if (similarDocs != null && similarDocs.isEmpty()) {
-            log.info("未查询到相关数据，尝试使用通用知识回答");
-        } else {
-            log.info("vector查询完毕");
-
-            if (similarDocs != null) {
-                log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
-                similarDocs.forEach(doc -> log.info(">>> {}", doc.getFormattedContent()));
-                knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
-            }
-        }
+        String knowledgeContext = vectorSearch(afterPurified,10,0.55);
 
         expansionPrompt = expansionPrompt.formatted(knowledgeContext);
 
         String translated = chater.call(expansionPrompt, afterPurified);
         log.info("AndKnowledge 大模型回答 {}", translated);
         return Result.success(requirement, translated);
+    }
+
+    /**
+     * 流式调用AI智能体
+     * @param requirement 用户原始输入
+     * @param purification 提示词，用于AI智能体整理用户输入
+     * @param expansionPrompt 提示词，用于向量查询后给智能体的提示词
+     * @param topk topk
+     * @param thresold 相似度，0到1
+     * */
+    public Flux<String> callWithPurificationAndKnowledgeStream(String requirement, String purification,String expansionPrompt,int topk,double thresold) {
+        String afterPurified = purifiy(requirement);
+        log.info("流式响应 afterPurified {}", afterPurified);
+
+        String vectorResult = vectorSearch(afterPurified,topk,thresold);
+        log.info("流式响应 vectorResult {}", vectorResult);
+
+        return chater.callFlux(vectorResult, expansionPrompt + " " + afterPurified);
     }
 
     /***
@@ -181,5 +187,34 @@ public class LLMUtil {
         log.info("用户抽象问题 '{}'，提取为：{}", requirement, afterPurified);
 
         return afterPurified;
+    }
+
+    public String purifiy(String requirement,String purification){
+        if (requirement.isBlank()) {
+            requirement = "用户啥也没说，你替他说两句好听的。";
+        }
+
+        String afterPurified = requirement.length() > 21 ? chater.call(purification, requirement) : requirement;
+        log.info("用户抽象问题 '{}'，提取为：{}", requirement, afterPurified);
+
+        return afterPurified;
+    }
+
+    public String vectorSearch(String afterPurified,int topk,double thresold){
+        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold);
+
+        String knowledgeContext = "";
+        if (similarDocs != null && similarDocs.isEmpty()) {
+            log.info("未查询到相关数据，尝试使用通用知识回答");
+        } else {
+            log.info("vector查询完毕");
+
+            if (similarDocs != null) {
+                log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
+                similarDocs.forEach(doc -> log.info(">>> {}", doc.getFormattedContent()));
+                knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
+            }
+        }
+        return knowledgeContext;
     }
 }

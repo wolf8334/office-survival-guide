@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI 智能助理 - 问答</title>
+    <style>
+        /* --- 统一基础样式 --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #f0f2f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-header {
+            background: #001529;
+            color: white;
+            padding: 0 20px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.65);
+            text-decoration: none;
+            margin-left: 20px;
+            font-size: 14px;
+        }
+
+        .nav-links a.active {
+            color: white;
+            font-weight: bold;
+        }
+
+        /* --- 聊天窗口布局 --- */
+        #chat-window {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .msg-item {
+            display: flex;
+            width: 100%;
+        }
+
+        .msg-item.user {
+            justify-content: flex-end;
+        }
+
+        .msg-item.ai {
+            justify-content: flex-start;
+        }
+
+        .msg-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.6;
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .user .msg-bubble {
+            background: #1890ff;
+            color: white;
+            border-bottom-right-radius: 0;
+        }
+
+        .ai .msg-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e8e8e8;
+            border-bottom-left-radius: 0;
+        }
+
+        /* --- 输入区域 --- */
+        .input-footer {
+            background: white;
+            padding: 20px;
+            border-top: 1px solid #d9d9d9;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        textarea {
+            flex: 1;
+            font-family: inherit;
+            font-size: 14px;
+            padding: 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            outline: none;
+            resize: none;
+            height: 44px;
+            transition: all 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #40a9ff;
+            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+        }
+
+        button {
+            font-family: inherit;
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 0 20px;
+            height: 44px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:disabled {
+            background: #bfbfbf;
+            cursor: not-allowed;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+<div class="nav-header">
+    <strong>AI 财税知识助手</strong>
+    <div class="nav-links">
+        <a href="entry.html">录入</a>
+        <a href="list.html">列表</a>
+        <a class="active" href="chat.html">问答</a>
+    </div>
+</div>
+
+<div id="chat-window">
+    <div class="msg-item ai">
+        <div class="msg-bubble">您好！我是您的本地 AI 助手，请问有什么可以帮您？</div>
+    </div>
+</div>
+
+<div class="input-footer">
+    <textarea id="userInput" placeholder="输入问题（Shift+回车换行，Enter发送）..." rows="1"></textarea>
+    <button id="sendBtn" onclick="handleSend()">发送</button>
+</div>
+
+<script>
+    const chatWindow = document.getElementById('chat-window');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // 处理回车发送，Shift+回车换行
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+
+    async function handleSend() {
+        const userInputField = document.getElementById('userInput');
+        const userRequirement = userInputField.value.trim();
+        if (!userRequirement) return;
+
+        appendMsg('user', userRequirement);
+        userInputField.value = '';
+
+        const aiItem = appendMsg('ai', '');
+        const targetPre = aiItem.querySelector('pre');
+
+        try {
+            const response = await fetch('/hqdmx/acknowledge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userRequirement: userRequirement })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            // --- 核心：缓冲区 ---
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                // 1. 将新到的碎片拼接到缓冲区
+                buffer += decoder.decode(value, { stream: true });
+
+                // 2. 只要缓冲区里有换行符，说明至少有一行完整的协议数据
+                while (buffer.indexOf('\n') !== -1) {
+                    let lineEnd = buffer.indexOf('\n');
+                    let line = buffer.substring(0, lineEnd).trim(); // 拿到这一行
+                    buffer = buffer.substring(lineEnd + 1); // 剩下的放回缓冲区
+
+                    // 3. 严格按照 SSE 协议解析：只有 data: 开头的才是我们要的内容
+                    if (line.startsWith('data:')) {
+                        const content = line.replace(/^data:/, '');
+                        targetPre.innerText += content; // 追加文字
+
+                        // 自动滚动
+                        const chatWindow = document.getElementById('chat-window');
+                        chatWindow.scrollTop = chatWindow.scrollHeight;
+                    }
+                }
+            }
+        } catch (err) {
+            targetPre.innerText = "服务连接异常: " + err.message;
+        }
+    }
+
+    // 辅助函数：生成消息气泡
+    function appendMsg(role, text) {
+        const chatWindow = document.getElementById('chat-window');
+        const item = document.createElement('div');
+        item.className = `msg-item ${role}`;
+        item.innerHTML = `<div class="msg-bubble"><pre>${text}</pre></div>`;
+        chatWindow.appendChild(item);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return item;
+    }
+</script>
+</body>
+</html>

@@ -9,9 +9,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 public class JSONUtil {
@@ -36,21 +33,21 @@ public class JSONUtil {
             // 校验返回的json的keyword之间是否有重复，如有，输出原始json
             List<Map<String,String>> list = objectMapper.readValue(processedJson, new TypeReference<List<Map<String, String>>>() {});
 
-            var dupList = list.stream()
-                    .map(m -> m.get("keyword"))
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-                    .entrySet().stream()
-                    .filter(e -> e.getValue() > 1).toList();
-
-            if (!dupList.isEmpty()){
-                log.info("返回值有重复数据 {}",processedJson);
-                dupList.forEach(e -> log.info("重复关键词: {}, 重复次数: {}", e.getKey(), e.getValue()));
-            }
+//            var dupList = list.stream()
+//                    .map(m -> m.get("keyword"))
+//                    .filter(Objects::nonNull)
+//                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+//                    .entrySet().stream()
+//                    .filter(e -> e.getValue() > 1).toList();
+//
+//            if (!dupList.isEmpty()){
+//                log.info("返回值有重复数据 {}",processedJson);
+//                dupList.forEach(e -> log.info("重复关键词: {}, 重复次数: {}", e.getKey(), e.getValue()));
+//            }
 
             return list;
         } catch (Exception e) {
-            // 报错时打印原始内容，方便你盯着日志修 Prompt
+            // 报错时打印原始内容，方便根据日志修 Prompt
             log.error(e.getMessage());
             log.error("解析失败，LLM吐出的脏数据: " + rawJson);
             return Collections.emptyList();

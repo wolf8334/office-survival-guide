@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,13 @@ public class SQLExpertService {
 
     @Qualifier("tidbJdbcTemplate")
     private final JdbcTemplate jdbcTemplate;
+
+    @Qualifier("pgJdbcTemplate")
+    private final JdbcTemplate pg;
+
+    public List<Map<String,Object>> getVector(){
+        return pg.queryForList("select t.id,t.keyword,t.explanation,v.embedding from sys_expert_rules t left join vector_store v on (metadata ->> 'id')::int = t.id");
+    }
 
     public Result<CommonData> writeSomeSQL(String requirement) {
 
