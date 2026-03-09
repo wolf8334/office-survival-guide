@@ -202,7 +202,7 @@ public class KnowledgeService {
     @Scheduled(fixedDelay = 60000 * 10)
     private void refreshVectorStore() throws SQLException{
         // 查询未向量化的数据
-        String sql = "select id,keyword,explanation from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM vector_store) and keyword is not null and keyword != ''";
+        String sql = "select id,keyword,explanation from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM vector_store where (metadata ->> 'id') is not null) and keyword is not null and keyword != ''";
         String vector = "delete from vector_store where content in (select keyword from public.sys_expert_rules where keyword is not null group by keyword having count(1) > 1)";
         String expertRule = "UPDATE sys_expert_rules a set KEYWORD = null WHERE KEYWORD IN (SELECT keyword FROM sys_expert_rules WHERE keyword IS NOT NULL GROUP BY keyword HAVING count(1) > 1)";
 
@@ -219,7 +219,7 @@ public class KnowledgeService {
 
                 String combinedContent = String.format("主题：%s。详细内容：%s", keyword, explanation);
 
-                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation));
+                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation,"id",id));
             }).toList());
         }
 

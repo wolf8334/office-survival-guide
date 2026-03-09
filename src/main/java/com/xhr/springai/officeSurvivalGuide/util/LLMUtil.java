@@ -47,6 +47,11 @@ public class LLMUtil {
         return Result.success(requirement, translated);
     }
 
+    public String vectorString(String requirement) {
+        float[] vector = embeddingModel.embed(requirement);
+        return "[" + Arrays.toString(vector).replace("[", "").replace("]", "") + "]";
+    }
+
     /**
      * 流式调用AI智能体
      * @param requirement 用户原始输入
@@ -60,7 +65,7 @@ public class LLMUtil {
         log.info("流式响应 afterPurified {}", afterPurified);
 
         String vectorResult = vectorSearch(afterPurified,topk,thresold);
-        log.info("流式响应 vectorResult {}", vectorResult);
+        log.debug("流式响应 vectorResult {}", vectorResult);
 
         return chater.callFlux(vectorResult, expansionPrompt + " " + afterPurified);
     }
@@ -74,20 +79,7 @@ public class LLMUtil {
         String afterPurified = purifiy(requirement);
 
         // 2 查询向量库，搜索相关内容
-        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, 10, 0.46);
-
-        String knowledgeContext = "";
-        if (similarDocs != null && similarDocs.isEmpty()) {
-            log.info("未查询到相关数据，尝试使用通用知识回答");
-        } else {
-            log.info("vector查询完毕");
-
-            if (similarDocs != null) {
-                log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
-                similarDocs.forEach(doc -> log.info(">>> {}", doc.getFormattedContent()));
-                knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
-            }
-        }
+        String knowledgeContext = vectorSearch(afterPurified, 10, 0.46);
 
         String rerank = """
                 你是一个知识提纯和关联度专家 我给你一堆向量搜索的结果和用户原始提问 你告诉我每条向量搜索结果和用户原始提问的相关度
@@ -159,11 +151,24 @@ public class LLMUtil {
         }
 
         // 1 分析用户输入
-        String translated = chater.call(expansionPrompt, requirement);
+        String translated = filterThinkAnswer(chater.call(expansionPrompt, requirement));
 
         log.info("大模型回答 {}", translated);
 
         return Result.success(requirement, translated);
+    }
+
+    public String callUserStatement(String requirement) {
+        if (requirement.isBlank()) {
+            requirement = "用户啥也没说，你替他说两句好听的。";
+        }
+
+        // 1 分析用户输入
+        String translated = filterThinkAnswer(chater.call( requirement));
+
+        log.info("大模型回答 {}", translated);
+
+        return translated;
     }
 
     private String purifiy(String requirement){
@@ -173,27 +178,21 @@ public class LLMUtil {
 
         // 1 提炼用户输入 转化成标准查询词
         String purification = """
-                你是一个专业的搜索引擎查询优化器。用户的输入可能是口语化的、包含情绪的或者是模糊的。 你的任务是：
+                角色：专家级意图转换器
+                任务：将模糊口语转为数据库检索关键词。
+                处理规则：
+                1. 归纳同类项：如果用户枚举了多个实例（如：南京、北京），请统一归纳为属性名词（如：地市）。
+                2. 三元素提取：
+                   - 实体对象（表/业务主体）
+                   - 目标指标（统计/查询的字段）
+                   - 过滤维度（WHERE 条件的核心）
+                3. 严格限制：仅输出 2-3 个核心词，空格分隔，严禁输出枚举值，严禁废话。
+                4. 如果输入信息中提到之前SQL执行报错，此信息需要保留。
                 
-                1 识别用户的核心搜索意图。
-                2 将其转化为 2-3 个最精准的实体名词或属性词，用于数据库检索。
-                3 严禁输出整句，严禁包含“我想”、“请问”等主观词汇。
-                4 多个关键词用空格分隔。
-                5 不要忽略关键词
-                
-                示例： 用户：哎呀累死了，年假能休多久啊？ 输出：年假 天数 规定。
+                转换示例：
+                    - 输入：“看下苏州、南京、无锡这几个地盘的合同额”
+                    - 输出：合同额 地市 区域
                 """;
-        String afterPurified = requirement.length() > 21 ? chater.call(purification, requirement) : requirement;
-        log.info("用户抽象问题 '{}'，提取为：{}", requirement, afterPurified);
-
-        return afterPurified;
-    }
-
-    public String purifiy(String requirement,String purification){
-        if (requirement.isBlank()) {
-            requirement = "用户啥也没说，你替他说两句好听的。";
-        }
-
         String afterPurified = requirement.length() > 21 ? chater.call(purification, requirement) : requirement;
         log.info("用户抽象问题 '{}'，提取为：{}", requirement, afterPurified);
 
@@ -205,7 +204,7 @@ public class LLMUtil {
 
         String knowledgeContext = "";
         if (similarDocs != null && similarDocs.isEmpty()) {
-            log.info("未查询到相关数据，尝试使用通用知识回答");
+            log.info("vectorSearch 未查询到相关数据，尝试使用通用知识回答");
         } else {
             log.info("vector查询完毕");
 
@@ -216,5 +215,11 @@ public class LLMUtil {
             }
         }
         return knowledgeContext;
+    }
+
+    private String filterThinkAnswer(String rawResponse){
+        // 使用正则表达式：(?s) 表示让 . 匹配包括换行符在内的所有字符
+        // <think>.*?</think> 匹配从开始标签到结束标签的所有内容
+        return rawResponse.replaceAll("(?s)^.*?</think>", "").trim();
     }
 }

@@ -22,7 +22,7 @@ public class SQLExpertService {
     private final LLMUtil llm;
 
     @Qualifier("tidbJdbcTemplate")
-    private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate mysql;
 
     @Qualifier("pgJdbcTemplate")
     private final JdbcTemplate pg;
@@ -32,7 +32,6 @@ public class SQLExpertService {
     }
 
     public Result<CommonData> writeSomeSQL(String requirement) {
-
         if (null == requirement || requirement.isBlank()) {
             return Result.userNoInput();
         }
@@ -65,7 +64,7 @@ public class SQLExpertService {
 
         String tableInfoSQL = "SELECT concat('表名: ',table_name,',表内数据含义: ',table_comment) as str FROM information_schema.TABLES where table_schema = 'sakila'";
 
-        List<String> tableInfo = jdbcTemplate.queryForList(tableInfoSQL,String.class);
+        List<String> tableInfo = mysql.queryForList(tableInfoSQL,String.class);
         String tables = String.join("\n",tableInfo);
 
         expansionPrompt += tables;
