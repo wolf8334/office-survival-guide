@@ -57,4 +57,4 @@ custom:
 
 logging:
   level:
-    org.springframework.jdbc.core.JdbcTemplate: INFO
+    org.springframework.jdbc.core.JdbcTemplate: DEBUG

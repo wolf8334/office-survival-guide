@@ -1,5 +1,6 @@
 package com.xhr.springai.officeSurvivalGuide.util;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -51,6 +52,14 @@ public class JSONUtil {
             log.error(e.getMessage());
             log.error("解析失败，LLM吐出的脏数据: " + rawJson);
             return Collections.emptyList();
+        }
+    }
+
+    public String parseString(Object obj){
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            return "";
         }
     }
 }
