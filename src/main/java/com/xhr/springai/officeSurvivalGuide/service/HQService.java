@@ -15,7 +15,6 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -77,9 +76,11 @@ public class HQService {
 
         if (!vectorResult.isEmpty()) {
            String sqlPrompt = """
-                    你是一个MySQL专家，根据相关表结构和用户需求写SQL，不需要输出你思考的过程，而是直接给出最终的基于MySQL方言，输出你认为可行的表名，如果有多张表，使用英文逗号分隔。表定义如下:
-                    """ + vectorResult;
-            String tableName = llm.callWithPurificationAndKnowledgeStream(requirement, "", sqlPrompt, 10, 0.4).collect(Collectors.joining()).block();
+                    你是一个MySQL专家，根据相关表结构和用户需求写SQL，不需要输出你思考的过程，而是直接给出最终的基于MySQL方言，输出你认为可行的表名，如果有多张表，使用英文逗号分隔。
+                    表定义是
+                    %s
+                    """.formatted(vectorResult);
+            String tableName = llm.callForString(requirement,sqlPrompt);
             log.info("tableName: {}", tableName);
 
             if (tableName != null) {
@@ -115,15 +116,18 @@ public class HQService {
                     String sqlPrompt3 = """
                         请根据用户要求
                         %s，
-                        查询结果
+                        结合示例数据
+                        %s，
+                        结合表结构
                         %s，
                         组织给用户的回复。
-                        """.formatted(requirement, resultJSON);
+                        """.formatted(requirement, resultJSON, ddl);
                     return Flux.just(llm.callUserStatement(sqlPrompt3));
                 } catch (Exception e) {
+                    e.printStackTrace();
                     String msg = e.getMessage();
                     log.info("msg: {}", msg);
-                    writeSQL(requirement + " 你刚才生成可执行SQL的时候报错了，语句是 " + sql + " 错误信息是 " + msg);
+                    //writeSQL(requirement + " 你刚才生成可执行SQL的时候报错了，语句是 " + sql + " 错误信息是 " + msg);
                 }
             }
         }
