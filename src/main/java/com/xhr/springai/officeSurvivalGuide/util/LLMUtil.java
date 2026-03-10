@@ -158,13 +158,31 @@ public class LLMUtil {
         return Result.success(requirement, translated);
     }
 
+    /***
+     * 调用LLM，不包含对用户输入的提炼，不包含向量库信息
+     * @param requirement 用户输入
+     * @param expansionPrompt 提示词
+     * */
+    public String callForString(String requirement, String expansionPrompt) {
+        if (requirement.isBlank()) {
+            requirement = "用户啥也没说，你替他说两句好听的。";
+        }
+
+        // 1 分析用户输入
+        String translated = filterThinkAnswer(chater.call(expansionPrompt, requirement));
+
+        log.info("大模型回答 {}", translated);
+
+        return translated;
+    }
+
     public String callUserStatement(String requirement) {
         if (requirement.isBlank()) {
             requirement = "用户啥也没说，你替他说两句好听的。";
         }
 
         // 1 分析用户输入
-        String translated = filterThinkAnswer(chater.call( requirement));
+        String translated = filterThinkAnswer(chater.call(requirement));
 
         log.info("大模型回答 {}", translated);
 
