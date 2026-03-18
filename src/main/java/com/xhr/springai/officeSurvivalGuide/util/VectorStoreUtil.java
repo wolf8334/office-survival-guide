@@ -7,6 +7,8 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -19,7 +21,8 @@ public class VectorStoreUtil {
 
     private static final Logger log = LoggerFactory.getLogger(VectorStoreUtil.class);
 
-    private final VectorStore vectorStore;
+    @Autowired
+    private VectorStore vectorStore;
 
     public void add(List<Document> documents){
         int batchSize = 50;
@@ -53,20 +56,37 @@ public class VectorStoreUtil {
     }
 
     public List<Document> similaritySearch(@NotNull String requirement) {
-        return this.similaritySearch(requirement,-1,-1);
+        return this.similaritySearch(requirement,-1,-1,null);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, int topk) {
-        return this.similaritySearch(requirement,topk,-1);
+        return this.similaritySearch(requirement,topk,-1,null);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, double threshold) {
-        return this.similaritySearch(requirement,-1,threshold);
+        return this.similaritySearch(requirement,-1,threshold,null);
+    }
+
+    public List<Document> similaritySearch(@NotNull String requirement,String filter) {
+        return this.similaritySearch(requirement,-1,-1,filter);
+    }
+
+    public List<Document> similaritySearch(@NotNull String requirement, int topk,String filter) {
+        return this.similaritySearch(requirement,topk,-1,filter);
+    }
+
+    public List<Document> similaritySearch(@NotNull String requirement, double threshold,String filter) {
+        return this.similaritySearch(requirement,-1,threshold,filter);
+    }
+
+    public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold) {
+        return this.similaritySearch(requirement,topk,threshold,null);
     }
 
 
-    public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold) {
+    public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold,String filter) {
         SearchRequest.Builder similaritySearchBuilder = SearchRequest.builder().query(requirement);
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
 
         if (topk > 0) {
             similaritySearchBuilder.topK(topk);
@@ -78,6 +98,10 @@ public class VectorStoreUtil {
             similaritySearchBuilder.similarityThreshold(threshold);
         } else {
             log.info("threshold无效，忽略");
+        }
+
+        if (filter != null) {
+            similaritySearchBuilder.filterExpression(b.eq("type",filter).build());
         }
 
         return vectorStore.similaritySearch(similaritySearchBuilder.build());

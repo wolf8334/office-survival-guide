@@ -17,8 +17,8 @@ spring:
     hikari:
       max-lifetime: 60000
       idle-timeout: 60000
-      keepalive-time: 30000
-      minimum-idle: 2
+      keepalive-time: 10000
+      minimum-idle: 5
       maximum-pool-size: 20
       connection-timeout: 30000
   ai:
@@ -37,13 +37,11 @@ spring:
             - "\n"
           frequency_penalty: 0.2
           presence_penalty: 0.1
-        enabled: true
       embedding:
         base-url: https://api.siliconflow.cn/
         options:
           model: ${custom.rerank-name}
           dimensions: 1024
-        enabled: true
     vectorstore:
       pgvector:
         dimensions: 1024

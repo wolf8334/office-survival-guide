@@ -11,9 +11,11 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
@@ -49,7 +51,9 @@ public class LLMUtil {
 
     public String vectorString(String requirement) {
         float[] vector = embeddingModel.embed(requirement);
-        return "[" + Arrays.toString(vector).replace("[", "").replace("]", "") + "]";
+        return "[" + IntStream.range(0, vector.length)
+                .mapToDouble(i -> vector[i]).mapToObj(v -> new BigDecimal(Double.toString(v)).toPlainString())
+                .collect(Collectors.joining(",")) + "]";
     }
 
     /**
@@ -211,14 +215,33 @@ public class LLMUtil {
                     - 输入：“看下苏州、南京、无锡这几个地盘的合同额”
                     - 输出：合同额 地市 区域
                 """;
-        String afterPurified = requirement.length() > 21 ? chater.call(purification, requirement) : requirement;
-        log.info("用户抽象问题 '{}'，提取为：{}", requirement, afterPurified);
-
-        return afterPurified;
+//        String afterPurified = requirement.length() > 21 ? chater.call(purification, requirement) : requirement;
+//        log.info("用户抽象问题 '{}'，提取为：{}", requirement, afterPurified);
+//
+//        return afterPurified;
+        return requirement;
     }
 
     public String vectorSearch(String afterPurified,int topk,double thresold){
         List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold);
+
+        String knowledgeContext = "";
+        if (similarDocs != null && similarDocs.isEmpty()) {
+            log.info("vectorSearch 未查询到相关数据，尝试使用通用知识回答");
+        } else {
+            log.info("vector查询完毕");
+
+            if (similarDocs != null) {
+                log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
+                similarDocs.forEach(doc -> log.info(">>> {}", doc.getFormattedContent()));
+                knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
+            }
+        }
+        return knowledgeContext;
+    }
+
+    public String vectorSearch(String afterPurified,int topk,double thresold,String filter){
+        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold,filter);
 
         String knowledgeContext = "";
         if (similarDocs != null && similarDocs.isEmpty()) {

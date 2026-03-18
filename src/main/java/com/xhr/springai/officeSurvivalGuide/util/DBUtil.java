@@ -1,7 +1,7 @@
 package com.xhr.springai.officeSurvivalGuide.util;
 
-import groovy.util.logging.Slf4j;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -44,7 +44,7 @@ public class DBUtil {
         } else {
             return Arrays.stream(tableNames.split(",")).map(
                     tableName -> {
-                        List<Map<String, Object>> list = mysql.queryForList("SELECT * FROM " +  tableName + " LIMIT 5");
+                        List<Map<String, Object>> list = mysql.queryForList("SELECT * FROM " +  tableName + " LIMIT 1");
                         String data = json.parseString(list);
                         return tableName + "样例数据 \n" + data;
                     }
