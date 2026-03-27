@@ -240,6 +240,13 @@ public class LLMUtil {
         return knowledgeContext;
     }
 
+    /**
+     * 根据用户输入内容，查询向量库
+     * @param afterPurified 待查询内容
+     * @param topk 查询参数 TOP-K
+     * @param thresold 相似度 thresold+distance=1
+     * @param filter metadata中type过滤内容
+     * */
     public String vectorSearch(String afterPurified,int topk,double thresold,String filter){
         List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold,filter);
 
