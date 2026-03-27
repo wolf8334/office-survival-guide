@@ -45,7 +45,7 @@ public class DBUtil {
             return Arrays.stream(tableNames.split(",")).map(
                     tableName -> {
                         List<Map<String, Object>> list = mysql.queryForList("SELECT * FROM " +  tableName + " LIMIT 1");
-                        String data = json.parseString(list);
+                        String data = json.parseObject(list);
                         return tableName + "样例数据 \n" + data;
                     }
             ).distinct().collect(Collectors.joining("\n\n"));
