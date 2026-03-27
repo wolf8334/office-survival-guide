@@ -18,7 +18,7 @@ public class JSONUtil {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public List<Map<String,String>> parseKeywords(String rawJson){
+    public List<Map<String, String>> parseKeywords(String rawJson) {
         if (rawJson == null || rawJson.isBlank()) {
             return Collections.emptyList();
         }
@@ -32,7 +32,8 @@ public class JSONUtil {
             }
 
             // 校验返回的json的keyword之间是否有重复，如有，输出原始json
-            List<Map<String,String>> list = objectMapper.readValue(processedJson, new TypeReference<List<Map<String, String>>>() {});
+            List<Map<String, String>> list = objectMapper.readValue(processedJson, new TypeReference<List<Map<String, String>>>() {
+            });
 
 //            var dupList = list.stream()
 //                    .map(m -> m.get("keyword"))
@@ -55,11 +56,20 @@ public class JSONUtil {
         }
     }
 
-    public String parseString(Object obj){
+    public String parseObject(Object obj) {
         try {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj);
         } catch (JsonProcessingException e) {
             return "";
+        }
+    }
+
+    public <T> T parseString(String json,Class<T> clazz) {
+        try {
+            return objectMapper.readValue(json, clazz);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }
