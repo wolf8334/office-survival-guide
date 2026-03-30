@@ -6,6 +6,7 @@ import com.xhr.springai.officeSurvivalGuide.bean.Result;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,11 @@ public class LLMUtil {
     private final Chater chater;
     private final VectorStoreUtil vectorStore;
     private final EmbeddingModel embeddingModel;
+    private final ChatMemory memory;
+
+    private final String conversationId = "chater";
+    private final String fluxConversationId = "chater_flux";
+
 
     /***
      * 调用LLM，包含对用户输入的提炼，包含向量库信息
