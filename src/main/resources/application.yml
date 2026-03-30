@@ -48,10 +48,17 @@ spring:
         distance-type: COSINE_DISTANCE
         index-type: HNSW
         initialize-schema: false
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: never
+            platform: postgresql
 custom:
   coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
   qwen-name: Qwen/Qwen3-8B
   rerank-name: BAAI/bge-m3
+  maxMessage: 10
 
 logging:
   level:
