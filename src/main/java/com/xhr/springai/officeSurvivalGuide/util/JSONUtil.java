@@ -72,4 +72,17 @@ public class JSONUtil {
             return null;
         }
     }
+
+    /**
+     * 使用Jackson处理所有需要转义的字符
+     * @param json 待处理的json串
+     * @return 处理后的字符串
+     * */
+    public String parseComma(String json) {
+        try {
+            return objectMapper.writeValueAsString(json);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
 }

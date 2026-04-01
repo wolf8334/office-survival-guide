@@ -6,7 +6,6 @@ import com.xhr.springai.officeSurvivalGuide.bean.Result;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,7 @@ public class LLMUtil {
     private final Chater chater;
     private final VectorStoreUtil vectorStore;
     private final EmbeddingModel embeddingModel;
-    private final ChatMemory memory;
+    private final JSONUtil json;
 
     private final String conversationId = "chater";
     private final String fluxConversationId = "chater_flux";
@@ -239,7 +238,7 @@ public class LLMUtil {
 
             if (similarDocs != null) {
                 log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
-                similarDocs.forEach(doc -> log.info(">>> {}", doc.getFormattedContent()));
+                similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
                 knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
             }
         }
@@ -264,7 +263,7 @@ public class LLMUtil {
 
             if (similarDocs != null) {
                 log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
-                similarDocs.forEach(doc -> log.info(">>> {}", doc.getFormattedContent()));
+                similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
                 knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
             }
         }
@@ -275,5 +274,9 @@ public class LLMUtil {
         // 使用正则表达式：(?s) 表示让 . 匹配包括换行符在内的所有字符
         // <think>.*?</think> 匹配从开始标签到结束标签的所有内容
         return rawResponse.replaceAll("(?s)^.*?</think>", "").trim();
+    }
+
+    private String convertDocumentForPrint(Document document){
+        return ">>> 元数据 %s  ID %s".formatted(json.parseObject(document.getMetadata()),document.getId());
     }
 }

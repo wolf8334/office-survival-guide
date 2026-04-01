@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.util.Map;
@@ -31,4 +32,14 @@ public class HQController {
         return service.acknowledge(userRequirement);
     }
 
+
+    @PostMapping("/summarize")
+    public String summarize(@RequestParam("file") MultipartFile file) {
+        return service.processFile(file.getResource());
+    }
+
+    @PostMapping("/vectorize")
+    public String vectorize(@RequestParam("file") MultipartFile file) {
+        return service.vectorize(file.getResource());
+    }
 }

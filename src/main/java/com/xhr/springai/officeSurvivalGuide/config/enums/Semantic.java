@@ -1,4 +1,4 @@
-package com.xhr.springai.officeSurvivalGuide.config;
+package com.xhr.springai.officeSurvivalGuide.config.enums;
 
 public enum Semantic {
     KNOWLEDGE,

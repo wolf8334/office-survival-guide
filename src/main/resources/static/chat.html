@@ -2,242 +2,164 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI 智能助理 - 问答</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 对话终端</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+
     <style>
-        /* --- 统一基础样式 --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        :root { --primary-color: #007bff; --bg-color: #f4f7f6; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg-color); margin: 0; display: flex; flex-direction: column; height: 100vh; color: #333; }
+        header { background: #fff; padding: 15px; border-bottom: 1px solid #ddd; text-align: center; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-        body {
-            font-family: "Microsoft YaHei", sans-serif;
-            background-color: #f0f2f5;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth; }
 
-        .nav-header {
-            background: #001529;
-            color: white;
-            padding: 0 20px;
-            height: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
+        .message { max-width: 85%; padding: 12px 18px; border-radius: 12px; line-height: 1.6; position: relative; word-wrap: break-word; }
+        .user { align-self: flex-end; background: var(--primary-color); color: white; border-bottom-right-radius: 2px; }
+        .assistant { align-self: flex-start; background: white; border: 1px solid #e1e4e8; border-bottom-left-radius: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); }
 
-        .nav-links a {
-            color: rgba(255, 255, 255, 0.65);
-            text-decoration: none;
-            margin-left: 20px;
-            font-size: 14px;
-        }
+        /* 打字机光标效果 */
+        .typing::after { content: "▌"; display: inline-block; color: var(--primary-color); animation: blink 0.8s infinite; margin-left: 3px; vertical-align: baseline; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-        .nav-links a.active {
-            color: white;
-            font-weight: bold;
-        }
+        .input-area { background: white; border-top: 1px solid #ddd; padding: 15px 20px; display: flex; gap: 12px; align-items: flex-end; }
+        textarea { flex: 1; height: 60px; min-height: 60px; max-height: 200px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; resize: none; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        textarea:focus { border-color: var(--primary-color); }
 
-        /* --- 聊天窗口布局 --- */
-        #chat-window {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
+        button { background: var(--primary-color); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; height: 44px; }
+        button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.8; }
 
-        .msg-item {
-            display: flex;
-            width: 100%;
-        }
-
-        .msg-item.user {
-            justify-content: flex-end;
-        }
-
-        .msg-item.ai {
-            justify-content: flex-start;
-        }
-
-        .msg-bubble {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 15px;
-            line-height: 1.6;
-            position: relative;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .user .msg-bubble {
-            background: #1890ff;
-            color: white;
-            border-bottom-right-radius: 0;
-        }
-
-        .ai .msg-bubble {
-            background: white;
-            color: #333;
-            border: 1px solid #e8e8e8;
-            border-bottom-left-radius: 0;
-        }
-
-        /* --- 输入区域 --- */
-        .input-footer {
-            background: white;
-            padding: 20px;
-            border-top: 1px solid #d9d9d9;
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-        }
-
-        textarea {
-            flex: 1;
-            font-family: inherit;
-            font-size: 14px;
-            padding: 10px;
-            border: 1px solid #d9d9d9;
-            border-radius: 4px;
-            outline: none;
-            resize: none;
-            height: 44px;
-            transition: all 0.2s;
-        }
-
-        textarea:focus {
-            border-color: #40a9ff;
-            box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-        }
-
-        button {
-            font-family: inherit;
-            background: #1890ff;
-            color: white;
-            border: none;
-            padding: 0 20px;
-            height: 44px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-
-        button:disabled {
-            background: #bfbfbf;
-            cursor: not-allowed;
-        }
-
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: inherit;
-            margin: 0;
-        }
+        /* Markdown 内部样式微调 */
+        .markdown-body { font-size: 15px !important; background: transparent !important; color: inherit !important; }
+        .markdown-body p { margin-bottom: 8px !important; }
+        .markdown-body ul, .markdown-body ol { margin-bottom: 8px !important; }
     </style>
 </head>
 <body>
-<div class="nav-header">
-    <strong>AI 财税知识助手</strong>
-    <div class="nav-links">
-        <a href="entry.html">录入</a>
-        <a href="list.html">列表</a>
-        <a class="active" href="chat.html">问答</a>
-    </div>
+
+<header>AI 助手</header>
+
+<div id="chat-box">
+    <div class="message assistant markdown-body">已准备就绪，请描述您的需求。</div>
 </div>
 
-<div id="chat-window">
-    <div class="msg-item ai">
-        <div class="msg-bubble">您好！我是您的本地 AI 助手，请问有什么可以帮您？</div>
-    </div>
-</div>
-
-<div class="input-footer">
-    <textarea id="userInput" placeholder="输入问题（Shift+回车换行，Enter发送）..." rows="1"></textarea>
-    <button id="sendBtn" onclick="handleSend()">发送</button>
+<div class="input-area">
+    <textarea id="user-input" placeholder="输入内容，回车发送，Shift+Enter 换行..."></textarea>
+    <button id="send-btn">发送</button>
 </div>
 
 <script>
-    const chatWindow = document.getElementById('chat-window');
-    const userInput = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
-
-    // 处理回车发送，Shift+回车换行
-    userInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
+    const md = window.markdownit({
+        html: true,
+        linkify: true,
+        breaks: true // 关键：允许插件识别单行换行
     });
 
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    function scrollToBottom() {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function createMessageNode(role) {
+        const div = document.createElement('div');
+        div.className = `message ${role} ${role === 'assistant' ? 'markdown-body typing' : ''}`;
+        chatBox.appendChild(div);
+        return div;
+    }
+
     async function handleSend() {
-        const userInputField = document.getElementById('userInput');
-        const userRequirement = userInputField.value.trim();
-        if (!userRequirement) return;
+        const text = userInput.value.trim();
+        if (!text || sendBtn.disabled) return;
 
-        appendMsg('user', userRequirement);
-        userInputField.value = '';
+        // 用户消息展示
+        const userNode = createMessageNode('user');
+        userNode.textContent = text;
+        userInput.value = '';
+        scrollToBottom();
 
-        const aiItem = appendMsg('ai', '');
-        const targetPre = aiItem.querySelector('pre');
+        // AI 消息初始化
+        const assistantNode = createMessageNode('assistant');
+        let fullContent = "";
+        sendBtn.disabled = true;
 
         try {
-            const response = await fetch('/hqdmx/acknowledge', {
+            const response = await fetch('hqdmx/acknowledge', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userRequirement: userRequirement })
+                body: JSON.stringify({ userRequirement: text })
             });
+
+            if (!response.ok) throw new Error("连接服务器失败");
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
 
-            // --- 核心：缓冲区 ---
+            // 使用缓冲区处理可能被截断的 SSE 数据
             let buffer = "";
 
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                // 1. 将新到的碎片拼接到缓冲区
                 buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
 
-                // 2. 只要缓冲区里有换行符，说明至少有一行完整的协议数据
-                while (buffer.indexOf('\n') !== -1) {
-                    let lineEnd = buffer.indexOf('\n');
-                    let line = buffer.substring(0, lineEnd).trim(); // 拿到这一行
-                    buffer = buffer.substring(lineEnd + 1); // 剩下的放回缓冲区
+                // 保留最后一个可能不完整的行在缓冲区
+                buffer = lines.pop();
 
-                    // 3. 严格按照 SSE 协议解析：只有 data: 开头的才是我们要的内容
-                    if (line.startsWith('data:')) {
-                        const content = line.replace(/^data:/, '');
-                        targetPre.innerText += content; // 追加文字
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('data:')) {
+                        // 提取 data: 后面的内容，保留原始空格和换行意图
+                        const content = line.replace(/^data:\s*/, '');
 
-                        // 自动滚动
-                        const chatWindow = document.getElementById('chat-window');
-                        chatWindow.scrollTop = chatWindow.scrollHeight;
+                        // 逻辑：如果收到的是空 data，通常代表换行
+                        fullContent += (content === "" ? "\n" : content);
+
+                        // 使用 requestAnimationFrame 优化渲染频率
+                        requestAnimationFrame(() => {
+                            assistantNode.innerHTML = md.render(fullContent);
+                            scrollToBottom();
+                        });
                     }
                 }
             }
-        } catch (err) {
-            targetPre.innerText = "服务连接异常: " + err.message;
+            // 处理缓冲区剩余内容
+            if (buffer.startsWith('data:')) {
+                fullContent += buffer.replace(/^data:\s*/, '');
+                assistantNode.innerHTML = md.render(fullContent);
+            }
+
+        } catch (error) {
+            assistantNode.classList.remove('typing');
+            assistantNode.textContent = "系统提示: " + error.message;
+        } finally {
+            assistantNode.classList.remove('typing');
+            sendBtn.disabled = false;
+            userInput.focus();
+            scrollToBottom();
         }
     }
 
-    // 辅助函数：生成消息气泡
-    function appendMsg(role, text) {
-        const chatWindow = document.getElementById('chat-window');
-        const item = document.createElement('div');
-        item.className = `msg-item ${role}`;
-        item.innerHTML = `<div class="msg-bubble"><pre>${text}</pre></div>`;
-        chatWindow.appendChild(item);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-        return item;
-    }
+    sendBtn.onclick = handleSend;
+
+    userInput.onkeydown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    };
+
+    // 自动高度自适应（可选）
+    userInput.oninput = function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    };
 </script>
+
 </body>
 </html>
