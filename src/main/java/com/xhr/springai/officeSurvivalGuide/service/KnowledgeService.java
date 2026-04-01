@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -37,6 +38,12 @@ public class KnowledgeService {
     @Qualifier("tidbDataSource")
     private final DataSource ds2;
 
+    @Value("${spring.ai.vectorstore.pgvector.schema-name:public}")
+    private String pgvectorSchema;
+
+    @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}")
+    private String pgvectorTableName;
+
 
     public void refreshKnowledgeBase() {
         log.info("开始执行专家知识库全量刷新任务");
@@ -61,8 +68,8 @@ public class KnowledgeService {
 
                 Map<String, Object> metadata = new HashMap<>();
                 metadata.put("category", "业务规则"); // metadata 只放这种用来做硬过滤的短标签
-                metadata.put("tag",keyword);
-                metadata.put("content",explanation);
+                metadata.put("tag", keyword);
+                metadata.put("content", explanation);
 
                 // 第一个参数 fullContent 是向量计算的内容
                 return new Document(fullContent, metadata);
@@ -80,19 +87,20 @@ public class KnowledgeService {
         }
     }
 
-    public List<Map<String,Object>> list(){
+    public List<Map<String, Object>> list() {
         String sql = "SELECT * FROM sys_expert_rules order by id";
         return jdbcTemplate.queryForList(sql);
     }
 
     /**
      * 从sys_expert_rule中获取keyword为空的数据，从大模型获取关键字并填充
-     * */
-    public void acquireKeyword(){
+     *
+     */
+    public void acquireKeyword() {
         String sql = "select id,left(explanation,2000) as explanation from sys_expert_rules where category is null";
         List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
 
-        log.info("查询到{}条待更新知识库",list.size());
+        log.info("查询到{}条待更新知识库", list.size());
 
         int batchSize = 1;
 
@@ -104,49 +112,49 @@ public class KnowledgeService {
                 // 开启虚拟线程
                 executor.submit(() -> {
                     try {
-                        log.info("任务开始，发送关键字{}条，剩余{}条",batchSize,list.size() - end);
+                        log.info("任务开始，发送关键字{}条，剩余{}条", batchSize, list.size() - end);
 
                         long t = System.currentTimeMillis();
 
                         // 构造包含 ID 的提示词 格式如：ID_1: 内容... \n ID_2: 内容...
                         String promptInfo = batch.stream()
-                                .filter(r -> !r.getOrDefault("explanation","").toString().isBlank())
-                                .map(r -> "ID_" + r.getOrDefault("id","") + " " + r.getOrDefault("explanation","") )
+                                .filter(r -> !r.getOrDefault("explanation", "").toString().isBlank())
+                                .map(r -> "ID_" + r.getOrDefault("id", "") + " " + r.getOrDefault("explanation", ""))
                                 .collect(Collectors.joining("\n"));
 
                         String prompt = """
-                    请提取以下每段内容的依据国民经济行业分类标准的对应的门类代码，返回内容仅包含门类代码，不包含代码名称。
-                    严格按 JSON 格式返回数组：[{"id": "ID_数字", "keyword": "门类代码"}, ...]
-                    格式约束：仅返回标准 JSON，严禁任何解释性文字。
-                    在返回 JSON 前，请检查提取的门类代码是否与原文描述的业务领域相符。如果不符，请重新提取。
-                    不允许输出 ```json 这种格式的，直接返回json内容
-                    
-                    游戏和娱乐新闻都是娱乐业
-                    
-                    门类代码	门类代码名称
-                    A	    农、林、牧、渔业
-                    B	    采矿业
-                    C	    制造业
-                    D	    电力、燃气及水的生产和供应业
-                    E	    建筑业
-                    F	    交通运输、仓储和邮政业
-                    G	    信息传输、计算机服务和软件业
-                    H	    批发和零售业
-                    I	    住宿和餐饮业
-                    J	    金融业
-                    K	    房地产业
-                    L	    租赁和商务服务业
-                    M	    科学研究、技术服务和地质勘查业
-                    N	    水利、环境和公共设施管理业
-                    O	    居民服务和其他服务业
-                    P	    教育
-                    Q	    卫生、社会保障和社会福利业
-                    R	    文化、体育和娱乐业
-                    S	    公共管理和社会组织
-                    T	    国际组织
-                    
-                    内容如下：
-                    """ + promptInfo;
+                                请提取以下每段内容的依据国民经济行业分类标准的对应的门类代码，返回内容仅包含门类代码，不包含代码名称。
+                                严格按 JSON 格式返回数组：[{"id": "ID_数字", "keyword": "门类代码"}, ...]
+                                格式约束：仅返回标准 JSON，严禁任何解释性文字。
+                                在返回 JSON 前，请检查提取的门类代码是否与原文描述的业务领域相符。如果不符，请重新提取。
+                                不允许输出 ```json 这种格式的，直接返回json内容
+                                
+                                游戏和娱乐新闻都是娱乐业
+                                
+                                门类代码	门类代码名称
+                                A	    农、林、牧、渔业
+                                B	    采矿业
+                                C	    制造业
+                                D	    电力、燃气及水的生产和供应业
+                                E	    建筑业
+                                F	    交通运输、仓储和邮政业
+                                G	    信息传输、计算机服务和软件业
+                                H	    批发和零售业
+                                I	    住宿和餐饮业
+                                J	    金融业
+                                K	    房地产业
+                                L	    租赁和商务服务业
+                                M	    科学研究、技术服务和地质勘查业
+                                N	    水利、环境和公共设施管理业
+                                O	    居民服务和其他服务业
+                                P	    教育
+                                Q	    卫生、社会保障和社会福利业
+                                R	    文化、体育和娱乐业
+                                S	    公共管理和社会组织
+                                T	    国际组织
+                                
+                                内容如下：
+                                """ + promptInfo;
 
                         // 4. 调用 Spring AI (硅基流动)
                         String jsonResponse = chater.call(prompt);
@@ -164,21 +172,23 @@ public class KnowledgeService {
                                         ps.setString(1, item.get("keyword"));
                                         ps.setLong(2, Long.parseLong(item.get("id").replace("ID_", "")));
                                     }
-                                    public int getBatchSize() { return results.size(); }
+
+                                    public int getBatchSize() {
+                                        return results.size();
+                                    }
                                 }
                         );
 
-                        log.info("完成调用,耗时 {} 毫秒",System.currentTimeMillis() - t);
+                        log.info("完成调用,耗时 {} 毫秒", System.currentTimeMillis() - t);
                     } catch (Exception e) {
                         log.error("批量提交失败 {}", e.getMessage());
-                        if (e.getMessage().startsWith("429")){
+                        if (e.getMessage().startsWith("429")) {
                             try {
                                 log.error("当前线程休眠1分钟");
                                 TimeUnit.MINUTES.sleep(1);
                             } catch (InterruptedException ignored) {
                             }
                         }
-                    } finally {
                     }
                 });
             }
@@ -200,13 +210,16 @@ public class KnowledgeService {
     }
 
     @Scheduled(fixedDelay = 60000 * 10)
-    private void refreshVectorStore() throws SQLException{
+    private void refreshVectorStore() throws SQLException {
+        String fullVectorTableName = pgvectorSchema + "." + pgvectorTableName;
+        log.info("fullVectorTableName {}", fullVectorTableName);
+
         // 查询未向量化的数据
-        String sql = "select id,keyword,explanation from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM vector_store where (metadata ->> 'id') is not null) and keyword is not null and keyword != ''";
-        String vector = "delete from vector_store where content in (select keyword from public.sys_expert_rules where keyword is not null group by keyword having count(1) > 1)";
+        String sql = "select id,keyword,explanation,category from sys_expert_rules where id not in (SELECT (metadata ->> 'id')::int FROM " + fullVectorTableName + " where (metadata ->> 'id') is not null) and keyword is not null and keyword != ''";
+        String vector = "delete from " + fullVectorTableName + " where content in (select keyword from public.sys_expert_rules where keyword is not null group by keyword having count(1) > 1)";
         String expertRule = "UPDATE sys_expert_rules a set KEYWORD = null WHERE KEYWORD IN (SELECT keyword FROM sys_expert_rules WHERE keyword IS NOT NULL GROUP BY keyword HAVING count(1) > 1)";
 
-        String refreshDBInfo = "delete from vector_store where content like '表名%'";
+        String refreshDBInfo = "delete from " + fullVectorTableName + " where content like '表名%'";
 
         List<Map<String, Object>> list = jdbcTemplate.queryForList(sql);
         List<Document> documents = new ArrayList<>();
@@ -216,10 +229,11 @@ public class KnowledgeService {
                 String keyword = (String) row.get("keyword");
                 Integer id = (Integer) row.get("id");
                 String explanation = (String) row.get("explanation");
+                String category = (String) row.get("category");
 
                 String combinedContent = String.format("主题：%s。详细内容：%s", keyword, explanation);
 
-                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation,"id",id));
+                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation, "id", id, "type", category));
             }).toList());
         }
 
@@ -244,34 +258,61 @@ public class KnowledgeService {
     private List<Document> indexTables() throws SQLException {
         List<Document> list = new ArrayList<>();
 
-        Connection conn = ds2.getConnection();
-        DatabaseMetaData metaData = conn.getMetaData();
-        String currentDb = conn.getCatalog();
+        try (Connection conn = ds2.getConnection()) {
+            DatabaseMetaData metaData = conn.getMetaData();
+            String currentDb = conn.getCatalog();
 
-        // 1. 获取所有表
-        ResultSet tables = metaData.getTables(currentDb, null, "%", new String[]{"TABLE"});
+            log.info("currentDb: {}", currentDb);
 
-        while (tables.next()) {
-            String tableName = tables.getString("TABLE_NAME");
-            String tableRemarks = tables.getString("REMARKS"); // 获取表注释
+            // 1. 获取所有表
+            ResultSet tables = metaData.getTables(currentDb, null, "%", new String[]{"TABLE"});
 
-            if (tableRemarks.isBlank()) continue;
+            while (tables.next()) {
+                String tableName = tables.getString("TABLE_NAME");
+                String tableRemarks = tables.getString("REMARKS"); // 获取表注释
 
-            // 2. 获取该表的所有字段和注释
+                if (tableRemarks.isBlank()) continue;
+
+                log.debug("表名: {}  中文名: {}", tableName, tableRemarks);
+
+                String tableIdentity = String.format(
+                        "表名：%s。含义：%s。",
+                        tableName, tableRemarks
+                );
+
+                list.add(new Document(tableIdentity, Map.of("table_name", tableName, "tableRemarks", tableRemarks, "type", "表定义")));
+                list.addAll(indexColumns(tableName));
+            }
+        }
+
+        log.info("刷新了{}条数据库信息", list.size());
+
+        return list;
+    }
+
+    private List<Document> indexColumns(String tableName) throws SQLException {
+        List<Document> list = new ArrayList<>();
+
+        try (Connection conn = ds2.getConnection()) {
+            DatabaseMetaData metaData = conn.getMetaData();
+
+            log.debug("indexColumns: {}", tableName);
+
+            // 获取字段信息
             ResultSet columns = metaData.getColumns(null, null, tableName, "%");
+
             StringBuilder columnInfo = new StringBuilder();
             while (columns.next()) {
                 columnInfo.append(columns.getString("COLUMN_NAME"));
 
-                if (!columns.getString("REMARKS").isBlank()){
+                if (!columns.getString("REMARKS").isBlank()) {
                     //字段注释
                     columnInfo.append("(").append(columns.getString("REMARKS")).append(") ");
                 }
-
                 columnInfo.append(",");
             }
 
-            // 3. 获取外键关系（关联关系自动提取）
+            // 获取主外键关系
             ResultSet foreignKeys = metaData.getImportedKeys(null, null, tableName);
             StringBuilder fkInfo = new StringBuilder();
             while (foreignKeys.next()) {
@@ -281,17 +322,12 @@ public class KnowledgeService {
             }
 
             String tableIdentity = String.format(
-                    "表名：%s；含义：%s；字段：%s；关联关系：%s",
-                    tableName, tableRemarks, columnInfo, fkInfo
+                    "表 %s 字段定义及主外键关系",
+                    tableName
             );
 
-            log.debug(tableIdentity);
-
-            list.add(new Document(tableIdentity, Map.of("ddl", getTableDDL(tableName,conn))));
+            list.add(new Document(tableIdentity, Map.of("table_name", tableName, "column_info", columnInfo, "table_keys", fkInfo, "type", "字段定义")));
         }
-
-        log.info("刷新了{}条数据库信息", list.size());
-
         return list;
     }
 

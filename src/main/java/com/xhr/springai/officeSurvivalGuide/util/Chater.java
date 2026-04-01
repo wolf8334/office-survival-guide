@@ -33,7 +33,7 @@ public class Chater implements ICaller {
     }
 
     public Flux<String> callFlux(String vectorResult, String afterPurified) {
-        return chatClient.prompt().user(u -> u.text(" 背景知识：{context} 用户问题：{query}").param("context", vectorResult).param("query", afterPurified))
+        return chatClient.prompt().system("在回答问题时要按照markdown格式回答，要严格按照标准的markdown格式").user(u -> u.text(" 背景知识：{context} 用户问题：{query}").param("context", vectorResult).param("query", afterPurified))
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, fluxConversationId)).stream().content();
     }
 }

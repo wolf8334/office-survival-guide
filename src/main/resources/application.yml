@@ -3,6 +3,12 @@ spring:
     name: osg
   main:
     allow-bean-definition-overriding: true
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
   datasource:
     pg:
       driver-class-name: org.postgresql.Driver
@@ -21,6 +27,20 @@ spring:
       minimum-idle: 5
       maximum-pool-size: 20
       connection-timeout: 30000
+
+  data:
+    redis:
+      host: ${REDIS_URL}
+      port: ${REDIS_PORT}
+      password: ${REDIS_PWD}
+      database: 0     # 使用第几个数据库（0-15）
+      lettuce:
+        pool:
+          max-active: 8   # 连接池最大活跃连接数
+          max-idle: 8     # 最大空闲连接
+          min-idle: 0     # 最小空闲连接
+          max-wait: 100ms # 连接等待超时时间
+
   ai:
     # 使用通用的 OpenAI 接口配置，指向 DeepSeek/Aliyun/其他厂商
     # 硅基流动 https://api.siliconflow.cn/ SILICONFLOW_API_KEY
@@ -58,8 +78,9 @@ custom:
   coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
   qwen-name: Qwen/Qwen3-8B
   rerank-name: BAAI/bge-m3
-  maxMessage: 10
+  maxMessage: 1
+  maxToken: 5000
 
 logging:
   level:
-    org.springframework.jdbc.core.JdbcTemplate: DEBUG
+    org.springframework.jdbc.core.JdbcTemplate: INFO
