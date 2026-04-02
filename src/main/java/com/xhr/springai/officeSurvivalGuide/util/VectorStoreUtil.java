@@ -8,7 +8,6 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
@@ -21,11 +20,11 @@ public class VectorStoreUtil {
 
     private static final Logger log = LoggerFactory.getLogger(VectorStoreUtil.class);
 
-    @Autowired
-    private VectorStore vectorStore;
+    private final VectorStore vectorStore;
 
     public void add(List<Document> documents){
-        int batchSize = 50;
+        int batchSize = 1000;
+
         for (int i = 0; i < documents.size(); i += batchSize) {
             int end = Math.min(i + batchSize, documents.size());
             List<Document> batch = documents.subList(i, end);

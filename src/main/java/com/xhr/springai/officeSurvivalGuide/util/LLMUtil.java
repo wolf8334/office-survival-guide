@@ -3,6 +3,7 @@ package com.xhr.springai.officeSurvivalGuide.util;
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.RerankResult;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
+import com.xhr.springai.officeSurvivalGuide.service.RerankService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,8 +29,7 @@ public class LLMUtil {
     private final EmbeddingModel embeddingModel;
     private final JSONUtil json;
 
-    private final String conversationId = "chater";
-    private final String fluxConversationId = "chater_flux";
+    private final RerankService rerank;
 
 
     /***
@@ -239,7 +239,12 @@ public class LLMUtil {
             if (similarDocs != null) {
                 log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
                 similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
+
+                similarDocs = rerank.rerank(afterPurified,similarDocs);
                 knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
+
+                log.info("重排序后");
+                similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
             }
         }
         return knowledgeContext;

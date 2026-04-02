@@ -67,9 +67,13 @@ public class ProgressUtil {
         String systemInstructions = """
                 你是一个知识库问答助手。
                 请参考以下背景信息来回答用户的问题。如果背景信息中没有相关内容，请礼貌地告知你不知道。
+                
+                请先列出参考资料中明确提到的字段和说明。
+                禁止推理：如果参考资料中没有提到某个参数的逻辑，请直接跳过，严禁根据字段名猜测其含义。
+                如果资料不足以支持完整回答，请在回答末尾注明“部分内容缺失”。
                 """;
         log.info("knowledge vectorString: {}", llm.vectorString(requirement));
-        return llm.callWithPurificationAndKnowledgeStream(requirement, purification, systemInstructions, 10, 0.5);
+        return llm.callWithPurificationAndKnowledgeStream(requirement, purification, systemInstructions, 50, 0.5);
     }
 
     @NonNull
