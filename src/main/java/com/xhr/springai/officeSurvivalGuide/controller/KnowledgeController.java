@@ -35,13 +35,6 @@ public class KnowledgeController {
         return Result.success("","专家知识添加完毕");
     }
 
-    @PostMapping("/acquireKeyword")
-    public Result<CommonData> acquireKeyword() {
-        log.info("更新专家库的关键字 ");
-        knowledgeService.acquireKeyword();
-        return Result.success("","专家关键字更新完毕");
-    }
-
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> list() {
         log.info("查询专家库关键字 ");

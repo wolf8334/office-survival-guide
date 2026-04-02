@@ -60,8 +60,9 @@ public class SemanticRouting {
                
                规则：
                 - 只输出标签和对应的标签枚举，使用JSON格式，不能确定的值就用空字符串，不要任何解释。
-                - answer_style、intent、target_type、time_scope如果无法判断，则返回other
+                - answer_style、intent、target_type、time_scope如果无法判断，则返回other。
                 - origin_message是用户发给你的消息，保留输入不要动。
+                - query_rewrite输出的时候要使用中文，不要写英文。
                JSON格式如下
                 {
                   "intent": "",
