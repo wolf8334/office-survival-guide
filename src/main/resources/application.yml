@@ -61,13 +61,20 @@ spring:
         base-url: https://api.siliconflow.cn/
         options:
           model: ${custom.rerank-name}
-          dimensions: 1024
+          dimensions: 4096
     vectorstore:
-      pgvector:
-        dimensions: 1024
-        distance-type: COSINE_DISTANCE
-        index-type: HNSW
-        initialize-schema: false
+      qdrant:
+        host: ${QDRANT_URL}
+        port: ${QDRANT_PORT}
+        api-key: ${QDRANT_API_KEY}
+        collection-name: ${QDRANT_COLLECTION_NAME}
+        use-tls: true
+        initialize-schema: true
+#      pgvector:
+#        dimensions: 4096
+#        distance-type: COSINE_DISTANCE
+#        index-type: HNSW
+#        initialize-schema: false
     chat:
       memory:
         repository:
@@ -77,7 +84,7 @@ spring:
 custom:
   coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
   qwen-name: Qwen/Qwen3-8B
-  rerank-name: BAAI/bge-m3
+  rerank-name: Qwen/Qwen3-Embedding-8B
   maxMessage: 1
   maxToken: 5000
 
