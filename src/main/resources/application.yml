@@ -60,7 +60,7 @@ spring:
       embedding:
         base-url: https://api.siliconflow.cn/
         options:
-          model: ${custom.rerank-name}
+          model: ${custom.embedding-name}
           dimensions: 4096
     vectorstore:
       qdrant:
@@ -69,7 +69,7 @@ spring:
         api-key: ${QDRANT_API_KEY}
         collection-name: ${QDRANT_COLLECTION_NAME}
         use-tls: true
-        initialize-schema: true
+        initialize-schema: false
 #      pgvector:
 #        dimensions: 4096
 #        distance-type: COSINE_DISTANCE
@@ -84,9 +84,11 @@ spring:
 custom:
   coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
   qwen-name: Qwen/Qwen3-8B
-  rerank-name: Qwen/Qwen3-Embedding-8B
+  embedding-name: Qwen/Qwen3-Embedding-8B
+  rerank-name: Qwen/Qwen3-Reranker-8B
   maxMessage: 1
-  maxToken: 5000
+  maxToken: 900
+  chunkSize: 200
 
 logging:
   level:

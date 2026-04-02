@@ -35,18 +35,6 @@ public class JSONUtil {
             List<Map<String, String>> list = objectMapper.readValue(processedJson, new TypeReference<List<Map<String, String>>>() {
             });
 
-//            var dupList = list.stream()
-//                    .map(m -> m.get("keyword"))
-//                    .filter(Objects::nonNull)
-//                    .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-//                    .entrySet().stream()
-//                    .filter(e -> e.getValue() > 1).toList();
-//
-//            if (!dupList.isEmpty()){
-//                log.info("返回值有重复数据 {}",processedJson);
-//                dupList.forEach(e -> log.info("重复关键词: {}, 重复次数: {}", e.getKey(), e.getValue()));
-//            }
-
             return list;
         } catch (Exception e) {
             // 报错时打印原始内容，方便根据日志修 Prompt
@@ -84,5 +72,15 @@ public class JSONUtil {
         } catch (JsonProcessingException e) {
             return null;
         }
+    }
+
+    public String cleanContent(String content) {
+        if (content == null) return "";
+        // 1. 将多个连续的换行替换为单个换行
+        String step1 = content.replaceAll("(\\r\\n|\\n|\\r){2,}", "\n");
+        // 2. 将连续的空格替换为一个空格
+        String step2 = step1.replaceAll(" +", " ");
+        // 3. 去掉首尾空格
+        return step2.trim();
     }
 }

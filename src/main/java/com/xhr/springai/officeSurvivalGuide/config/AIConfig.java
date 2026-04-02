@@ -32,8 +32,8 @@ public class AIConfig {
     @Value("${custom.coder-name}")
     private String coderName;
 
-    @Value("${custom.rerank-name}")
-    private String rerankName;
+    @Value("${custom.embedding-name}")
+    private String embeddingName;
 
     @Value("${custom.qwen-name}")
     private String qwenName;
@@ -70,8 +70,8 @@ public class AIConfig {
 
     @Bean("rerankClient")
     public ChatClient reRankChatClient(@NonNull ChatClient.Builder builder, TokenAdvisor tokenAdvisor) {
-        log.info("加载重排序专家模型 {}", rerankName);
-        OpenAiChatOptions options = OpenAiChatOptions.builder().model(rerankName).stop(List.of("```", "```json")).build();
+        log.info("加载向量化专家模型 {}", embeddingName);
+        OpenAiChatOptions options = OpenAiChatOptions.builder().model(embeddingName).stop(List.of("```", "```json")).build();
 
         return builder.clone()
                 .defaultSystem("你是一位优秀的重排序专家，协助用户完成重排序工作。")

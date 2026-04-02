@@ -1,6 +1,5 @@
 package com.xhr.springai.officeSurvivalGuide.service;
 
-import com.xhr.springai.officeSurvivalGuide.util.Chater;
 import com.xhr.springai.officeSurvivalGuide.util.JSONUtil;
 import com.xhr.springai.officeSurvivalGuide.util.VectorStoreUtil;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +30,6 @@ public class KnowledgeService {
 
     private final JdbcTemplate jdbcTemplate;
     private final VectorStoreUtil vectorStore;
-    private final Chater chater;
     private final JSONUtil json;
 
     @Qualifier("tidbDataSource")
@@ -127,9 +125,9 @@ public class KnowledgeService {
                 String explanation = (String) row.get("explanation");
                 String category = (String) row.get("category");
 
-                String combinedContent = String.format("主题：%s。详细内容：%s", keyword, explanation);
+                String combinedContent = json.cleanContent(String.format("主题：%s。详细内容：%s", keyword, explanation));
 
-                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation, "id", id, "type", category));
+                return new Document(combinedContent, Map.of("keyword", keyword, "raw_explanation", explanation, "id", id, "sub-type", category,"type","专家知识库"));
             }).toList());
         }
 
@@ -140,6 +138,11 @@ public class KnowledgeService {
 
         //清除向量库中的表结构信息
         jdbcTemplate.execute(refreshDBInfo);
+
+        //清除库中已存在的type=表定义、字段定义、专家知识库的内容
+        vectorStore.delete("type == '表定义'");
+        vectorStore.delete("type == '字段定义'");
+        vectorStore.delete("type == '专家知识库'");
 
         //更新知识库中未向量化的内容
         vectorStore.add(documents);
@@ -171,10 +174,10 @@ public class KnowledgeService {
 
                 log.debug("表名: {}  中文名: {}", tableName, tableRemarks);
 
-                String tableIdentity = String.format(
+                String tableIdentity = json.cleanContent(String.format(
                         "表名：%s。含义：%s。",
                         tableName, tableRemarks
-                );
+                ));
 
                 list.add(new Document(tableIdentity, Map.of("table_name", tableName, "tableRemarks", tableRemarks, "type", "表定义")));
                 list.addAll(indexColumns(tableName));
@@ -217,10 +220,10 @@ public class KnowledgeService {
                         .append("关联").append(foreignKeys.getString("PKTABLE_NAME")).append("; ");
             }
 
-            String tableIdentity = String.format(
+            String tableIdentity = json.cleanContent(String.format(
                     "表 %s 字段定义及主外键关系",
                     tableName
-            );
+            ));
 
             list.add(new Document(tableIdentity, Map.of("table_name", tableName, "column_info", columnInfo.toString(), "table_keys", fkInfo.toString(), "type", "字段定义")));
         }
