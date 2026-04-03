@@ -10,8 +10,9 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
-import org.springframework.ai.chat.memory.repository.jdbc.PostgresChatMemoryRepositoryDialect;
+import org.springframework.ai.chat.memory.repository.jdbc.MysqlChatMemoryRepositoryDialect;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +42,7 @@ public class AIConfig {
     @Value("${custom.maxMessage}")
     private int maxMessage;
 
+    @Qualifier("tidbJdbcTemplate")
     private final JdbcTemplate jdbcTemplate;
 
     @Bean("qwenClient")
@@ -83,7 +85,7 @@ public class AIConfig {
     @Bean("chatMemoryRepository")
     public ChatMemoryRepository chatMemoryRepo(){
         log.info("加载对话持久层");
-        return JdbcChatMemoryRepository.builder().jdbcTemplate(jdbcTemplate).dialect(new PostgresChatMemoryRepositoryDialect()).build();
+        return JdbcChatMemoryRepository.builder().jdbcTemplate(jdbcTemplate).dialect(new MysqlChatMemoryRepositoryDialect()).build();
     }
 
     @Bean("chatMemory")

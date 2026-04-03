@@ -19,3 +19,5 @@
 已实现Qdrant适配，支持Qwen/Qwen3-Embedding-8B
 
 已实现Rerank增强
+
+完善流式页面展示效果
