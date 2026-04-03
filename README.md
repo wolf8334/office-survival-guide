@@ -4,6 +4,17 @@
 基于Spring AI的大模型研究，目前专注于RAG的意图识别、BM25及RRF。
 
 #### 软件架构
+---
+v2版本
+
+支持多种向量库的实现，包括Qdrant，Milvus，PGVector，默认Qdrant
+
+NL2SQL功能可选，默认不启动
+
+完善代码结构，整理功能实现
+
+---
+v1版本
 已实现基于Spring Boot 3.5.11和Spring AI 1.1.3的框架搭建。
 
 已实现多模型切换及多数据源。
@@ -18,6 +29,6 @@
 
 已实现Qdrant适配，支持Qwen/Qwen3-Embedding-8B
 
-已实现Rerank增强
+已实现Rerank增强，支持Qwen/Qwen3-Reranker-8B
 
 完善流式页面展示效果
