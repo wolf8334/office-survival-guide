@@ -21,13 +21,6 @@ public class KnowledgeController {
 
     private final KnowledgeService knowledgeService;
 
-    @PostMapping("/refresh")
-    public Result<CommonData> refreshKnowledge() {
-        log.info("刷新向量知识库");
-        knowledgeService.refreshKnowledgeBase();
-        return Result.success("","向量库刷新完毕");
-    }
-
     @PostMapping("/addKnowledge")
     public Result<CommonData> addKnowledgeBase(@RequestBody Map<String, String> knowledgeBase) {
         log.info("新增专家知识库，内容是 " +  knowledgeBase);
