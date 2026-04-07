@@ -13,27 +13,25 @@ import javax.sql.DataSource;
 @Configuration
 public class DataSourceConfig {
 
-    // ================== 专家库 (PostgreSQL) ==================
-    @Primary
     @Bean(name = "pgDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.pg")
     public DataSource pgDataSource() {
         return DataSourceBuilder.create().build();
     }
 
-    @Primary
     @Bean(name = "pgJdbcTemplate")
     public JdbcTemplate pgJdbcTemplate(@Qualifier("pgDataSource") DataSource dataSource) {
         return new JdbcTemplate(dataSource);
     }
 
-    // ================== 验证库 (TiDB) ==================
+    @Primary
     @Bean(name = "tidbDataSource")
     @ConfigurationProperties(prefix = "spring.datasource.tidb")
     public DataSource tidbDataSource() {
         return DataSourceBuilder.create().build();
     }
 
+    @Primary
     @Bean(name = "tidbJdbcTemplate")
     public JdbcTemplate tidbJdbcTemplate(@Qualifier("tidbDataSource") DataSource dataSource) {
         return new JdbcTemplate(dataSource);

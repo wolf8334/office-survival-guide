@@ -42,8 +42,4 @@ public class OSGService {
                 """;
         return llm.callWithPurificationAndKnowledge(requirement,expansionPrompt);
     }
-
-    public Result<CommonData> acknowledge(String requirement) {
-        return llm.callWithPurificationAndKnowledgeRerank(requirement);
-    }
 }

@@ -23,8 +23,8 @@ public class HQController {
 
     private final HQService service;
 
-    @Operation(method = "POST",description = "根据后勤业务知识，回答用户问题")
-    @PostMapping(value ="/acknowledge", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(method = "POST", description = "根据后勤业务知识，回答用户问题")
+    @PostMapping(value = "/acknowledge", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> acknowledge(@RequestBody Map<String, String> requirements) throws JsonProcessingException {
         String userRequirement = requirements.get("userRequirement");
         log.info("用户输入是 {} ", userRequirement);

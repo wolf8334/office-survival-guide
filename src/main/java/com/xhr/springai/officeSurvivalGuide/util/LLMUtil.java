@@ -1,7 +1,6 @@
 package com.xhr.springai.officeSurvivalGuide.util;
 
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
-import com.xhr.springai.officeSurvivalGuide.bean.RerankResult;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
 import com.xhr.springai.officeSurvivalGuide.service.RerankService;
 import lombok.RequiredArgsConstructor;
@@ -80,90 +79,12 @@ public class LLMUtil {
     }
 
     /***
-     * 调用LLM，包含对用户输入的提炼，包含向量库信息
-     * @param requirement 用户输入
-     * */
-    public Result<CommonData> callWithPurificationAndKnowledgeRerank(String requirement) {
-        // 1 提纯
-        String afterPurified = purifiy(requirement);
-
-        // 2 查询向量库，搜索相关内容
-        String knowledgeContext = vectorSearch(afterPurified, 10, 0.46);
-
-        String rerank = """
-                你是一个知识提纯和关联度专家 我给你一堆向量搜索的结果和用户原始提问 你告诉我每条向量搜索结果和用户原始提问的相关度
-                回答格式是分数在前面 空格分割 后面是向量搜索的结果 分数从0到100 整数 没有分数
-                
-                用户原始问题
-                %s
-                
-                向量库搜索结果
-                %s
-                """.formatted(requirement, knowledgeContext);
-        String rerankResult = chater.call(rerank);
-
-        List<RerankResult> list = RerankParser.parse(rerankResult).stream().peek(rrr -> log.info(rrr.toString())).filter(rrr -> rrr.score() >= 50).toList();
-
-        if (list.isEmpty()) {
-            return Result.success(requirement, "无相关结果，未找到符合条件的业务规则");
-        } else {
-            String rerankPrompt = """
-                    你现在是一个严格的【专家规则库】回复助手。
-                    
-                    【已知知识库内容】：
-                    %s
-                    
-                    【回复准则】：
-                    1. **语义理解**：请理解业务含义。例如：“不耗电” = “不用电”；“物理阻隔” = “非电子”。
-                    2. **排除法**：如果用户要求“不用电”，请排除任何提及“需电力”、“电源”、“传感器”的选项。
-                    3. **输出格式**：找到后，直接提取该规则的内容，不要废话。
-                    4. 若实在没有任何相关内容（哪怕是沾边的），才回答“未找到符合条件的业务规则”。
-                    """;
-            String knowledges = list.stream().map(RerankResult::content).collect(Collectors.joining("\n"));
-
-            rerankPrompt = rerankPrompt.formatted(knowledges);
-            log.info("knowledges {}", knowledges);
-            log.info("requirement {}", requirement);
-
-            String translated = chater.call(rerankPrompt, requirement);
-            log.info("Rerank 大模型回答 {}", translated);
-
-            return Result.success(requirement, translated);
-        }
-    }
-
-    /***
-     * 调用LLM，包含对用户输入的提炼，不包含向量库信息
-     * @param requirement 用户输入
-     * @param expansionPrompt 提示词
-     * */
-    public Result<CommonData> callWithPurificationWithoutKnowledge(String requirement, String expansionPrompt) {
-        // 1 提炼用户输入 转化成标准查询词
-        String afterPurified = purifiy(requirement);
-
-        // 2 分析用户输入
-        String translated = chater.call(expansionPrompt, afterPurified);
-
-        log.info("WithoutKnowledge 大模型回答 {}", translated);
-
-        return Result.success(requirement, translated);
-    }
-
-    /***
      * 调用LLM，不包含对用户输入的提炼，不包含向量库信息
      * @param requirement 用户输入
      * @param expansionPrompt 提示词
      * */
     public Result<CommonData> call(String requirement, String expansionPrompt) {
-        if (requirement.isBlank()) {
-            requirement = "用户啥也没说，你替他说两句好听的。";
-        }
-
-        // 1 分析用户输入
-        String translated = filterThinkAnswer(chater.call(expansionPrompt, requirement));
-
-        log.info("大模型回答 {}", translated);
-
+        String translated = callForString(expansionPrompt, requirement);
         return Result.success(requirement, translated);
     }
 
@@ -181,7 +102,6 @@ public class LLMUtil {
         String translated = filterThinkAnswer(chater.call(expansionPrompt, requirement));
 
         log.info("大模型回答 {}", translated);
-
         return translated;
     }
 
