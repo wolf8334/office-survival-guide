@@ -11,13 +11,11 @@ import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -29,6 +27,8 @@ public class HQService {
     private final LLMUtil llm;
     private final JSONUtil json;
     private final VectorStoreUtil vector;
+    private final JdbcTemplate jdbcTemplate;
+
 
     @Value("${custom.maxToken}")
     private int maxToken;
@@ -53,12 +53,21 @@ public class HQService {
         List<Document> list = new ArrayList<>();
         splitDocs.forEach(document -> {
             if (document.getText() != null) {
-                list.add(new Document(json.cleanContent(document.getText()), Map.of("filename", Objects.requireNonNull(filename), "type", "知识库文件导入")));
+                String uuid = UUID.randomUUID().toString();
+                list.add(new Document(uuid,json.cleanContent(document.getText()), Map.of("filename", Objects.requireNonNull(filename), "type", "知识库文件导入")));
             }
         });
+        log.info("文档{}生成完毕",filename);
 
         vector.delete("type == '知识库文件导入' && filename == '%s'".formatted(filename));
+        log.info("文档{}清理完毕",filename);
         vector.add(list);
+        log.info("文档{}向量化完毕",filename);
+
+        //将切片的document入库MySQL
+        addDocumentToMySQL(list);
+        log.info("文档{}入库完毕",filename);
+
         return "文档入库完成";
     }
 
@@ -85,4 +94,11 @@ public class HQService {
 
         return splitDocs;
     }
+
+    private void addDocumentToMySQL(List<Document> documents){
+        String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values ('%s','%s','%s','%s');";
+        documents.forEach(doc -> jdbcTemplate.execute(sql.formatted(doc.getId(),doc.getMetadata().get("filename"),doc.getText(),json.parseObject(doc.getMetadata()))));
+    }
+
+
 }

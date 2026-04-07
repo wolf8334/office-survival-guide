@@ -8,12 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -27,6 +27,7 @@ public class LLMUtil {
     private final VectorStoreUtil vectorStore;
     private final EmbeddingModel embeddingModel;
     private final JSONUtil json;
+    private final JdbcTemplate jdbcTemplate;
 
     private final RerankService rerank;
 
@@ -158,6 +159,17 @@ public class LLMUtil {
 
             if (similarDocs != null) {
                 log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
+
+                List<Map<String, Object>> bm25 = BM25Search(afterPurified,50);
+
+                List<String> vectorIds = similarDocs.stream().map(Document::getId).toList();
+                List<String> bm25Ids = bm25.stream().map(m -> m.get("id").toString()).toList();
+                List<String> rrfIds = rrfCombine(vectorIds,bm25Ids);
+
+                List<Document> finalSimilarDocs = similarDocs;
+                similarDocs = rrfIds.stream().limit(15).map(id -> finalSimilarDocs.stream().filter(doc -> doc.getId().equals(id)).findFirst().orElse(null)).filter(Objects::nonNull).toList();
+
+                log.info("RRF评分后");
                 similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
 
                 similarDocs = rerank.rerank(afterPurified,similarDocs);
@@ -203,5 +215,41 @@ public class LLMUtil {
 
     private String convertDocumentForPrint(Document document){
         return ">>> 元数据 %s  ID %s".formatted(json.parseObject(document.getMetadata()),document.getId());
+    }
+
+    private List<Map<String, Object>> BM25Search(String requirement,int size){
+        String sql = """
+                SELECT id, content,
+                       MATCH(content) AGAINST('%s' IN NATURAL LANGUAGE MODE) AS score
+                FROM knowledge_chunks
+                WHERE MATCH(content) AGAINST('%s' IN NATURAL LANGUAGE MODE)
+                ORDER BY score DESC
+                LIMIT %d
+                """.formatted(requirement,requirement,size);
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    public List<String> rrfCombine(List<String> vectorIds, List<String> mysqlIds) {
+        Map<String, Double> scoreMap = new HashMap<>();
+        int k = 60; // 经典的 RRF 常数
+
+        // 处理向量路排名
+        for (int i = 0; i < vectorIds.size(); i++) {
+            String id = vectorIds.get(i);
+            scoreMap.put(id, scoreMap.getOrDefault(id, 0.0) + 1.0 / (k + i + 1));
+        }
+
+        // 处理 MySQL BM25 路排名
+        for (int i = 0; i < mysqlIds.size(); i++) {
+            String id = mysqlIds.get(i);
+            // 如果两边都有这个 ID，分数会累加，排名自然靠前
+            scoreMap.put(id, scoreMap.getOrDefault(id, 0.0) + 1.0 / (k + i + 1));
+        }
+
+        // 按最终得分倒序排列
+        return scoreMap.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 }

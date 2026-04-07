@@ -23,7 +23,7 @@ public class VectorStoreUtil {
     private final VectorStore vectorStore;
 
     public void add(List<Document> documents){
-        int batchSize = 1000;
+        int batchSize = 50;
 
         for (int i = 0; i < documents.size(); i += batchSize) {
             int end = Math.min(i + batchSize, documents.size());
