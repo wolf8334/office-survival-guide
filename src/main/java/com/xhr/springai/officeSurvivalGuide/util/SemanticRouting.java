@@ -41,7 +41,7 @@ public class SemanticRouting {
                definition_explain: 概念 解释
                other: 其他
                
-               target_type表示对象类型，枚举如下。  
+               target_type表示对象类型，枚举如下。
                project_progress: 项目进展
                project_analyse: 项目分析
                project_plan: 项目计划
@@ -63,6 +63,7 @@ public class SemanticRouting {
                 - answer_style、intent、target_type、time_scope如果无法判断，则返回other。
                 - origin_message是用户发给你的消息，保留输入不要动。
                 - query_rewrite输出的时候要使用中文，不要写英文。
+               %s
                JSON格式如下
                 {
                   "intent": "",
@@ -76,7 +77,7 @@ public class SemanticRouting {
                   "answer_style": "",
                   "origin_message": "%s"
                 }
-               """.formatted(json.parseComma(requirment));
+               """.formatted(llm.getExpertKonwledge(),json.parseComma(requirment));
         Result<CommonData> rs = llm.call(requirment, prompt);
         return json.parseString(rs.data().translate(),IntentClassification.class);
     }

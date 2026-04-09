@@ -60,6 +60,14 @@ public class JSONUtil {
             return null;
         }
     }
+    public <T> T parseString(String json,TypeReference<T> tr) {
+        try {
+            return objectMapper.readValue(json, tr);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
     /**
      * 使用Jackson处理所有需要转义的字符

@@ -45,7 +45,7 @@ public class LLMUtil {
         log.info(Arrays.toString(vector));
 
         // 2 查询向量库，搜索相关内容
-        String knowledgeContext = vectorSearch(afterPurified,10,0.55);
+        String knowledgeContext = vectorSearch(afterPurified, 10, 0.55);
 
         expansionPrompt = expansionPrompt.formatted(knowledgeContext);
 
@@ -63,17 +63,19 @@ public class LLMUtil {
 
     /**
      * 流式调用AI智能体
-     * @param requirement 用户原始输入
-     * @param purification 提示词，用于AI智能体整理用户输入
+     *
+     * @param requirement     用户原始输入
+     * @param purification    提示词，用于AI智能体整理用户输入
      * @param expansionPrompt 提示词，用于向量查询后给智能体的提示词
-     * @param topk topk
-     * @param thresold 相似度，0到1
-     * */
-    public Flux<String> callWithPurificationAndKnowledgeStream(String requirement, String purification,String expansionPrompt,int topk,double thresold) {
+     * @param topk            topk
+     * @param thresold        相似度，0到1
+     *
+     */
+    public Flux<String> callWithPurificationAndKnowledgeStream(String requirement, String purification, String expansionPrompt, int topk, double thresold) {
         String afterPurified = purifiy(requirement);
         log.info("流式响应 afterPurified {}", afterPurified);
 
-        String vectorResult = vectorSearch(afterPurified,topk,thresold);
+        String vectorResult = vectorSearch(afterPurified, topk, thresold);
         log.debug("流式响应 vectorResult {}", vectorResult);
 
         return chater.callFlux(vectorResult, expansionPrompt + " " + afterPurified);
@@ -119,7 +121,7 @@ public class LLMUtil {
         return translated;
     }
 
-    private String purifiy(String requirement){
+    private String purifiy(String requirement) {
         if (requirement.isBlank()) {
             requirement = "用户啥也没说，你替他说两句好听的。";
         }
@@ -148,7 +150,7 @@ public class LLMUtil {
         return requirement;
     }
 
-    public String vectorSearch(String afterPurified,int topk,double thresold){
+    public String vectorSearch(String afterPurified, int topk, double thresold) {
         List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold);
 
         String knowledgeContext = "";
@@ -160,23 +162,30 @@ public class LLMUtil {
             if (similarDocs != null) {
                 log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
 
-                List<Map<String, Object>> bm25 = BM25Search(afterPurified,50);
+                List<Map<String, Object>> bm25 = BM25Search(afterPurified, 50);
 
                 List<String> vectorIds = similarDocs.stream().map(Document::getId).toList();
                 List<String> bm25Ids = bm25.stream().map(m -> m.get("id").toString()).toList();
-                List<String> rrfIds = rrfCombine(vectorIds,bm25Ids);
+                List<String> rrfIds = rrfCombine(vectorIds, bm25Ids);
 
                 List<Document> finalSimilarDocs = similarDocs;
                 similarDocs = rrfIds.stream().limit(15).map(id -> finalSimilarDocs.stream().filter(doc -> doc.getId().equals(id)).findFirst().orElse(null)).filter(Objects::nonNull).toList();
 
                 log.info("RRF评分后");
-                similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
+                similarDocs.forEach(this::convertDocumentForPrint);
 
-                similarDocs = rerank.rerank(afterPurified,similarDocs);
+                similarDocs = rerank.rerank(afterPurified, similarDocs);
+
+                log.info("重排序后共{}条",similarDocs.size());
+                similarDocs.forEach(this::convertDocumentForPrint);
+
+                //根据rerank的结果，按照其中的文件名、页码，从MySQL取出完整内容
+                similarDocs = rerank.getFullDocument(similarDocs);
+
+                log.info("上下文窗口扩展后共{}条",similarDocs.size());
+                similarDocs.forEach(this::convertDocumentForPrint);
+
                 knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
-
-                log.info("重排序后");
-                similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
             }
         }
         return knowledgeContext;
@@ -184,13 +193,15 @@ public class LLMUtil {
 
     /**
      * 根据用户输入内容，查询向量库
+     *
      * @param afterPurified 待查询内容
-     * @param topk 查询参数 TOP-K
-     * @param thresold 相似度 thresold+distance=1
-     * @param filter metadata中type过滤内容
-     * */
-    public String vectorSearch(String afterPurified,int topk,double thresold,String filter){
-        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold,filter);
+     * @param topk          查询参数 TOP-K
+     * @param thresold      相似度 thresold+distance=1
+     * @param filter        metadata中type过滤内容
+     *
+     */
+    public String vectorSearch(String afterPurified, int topk, double thresold, String filter) {
+        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold, filter);
 
         String knowledgeContext = "";
         if (similarDocs != null && similarDocs.isEmpty()) {
@@ -200,24 +211,29 @@ public class LLMUtil {
 
             if (similarDocs != null) {
                 log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
-                similarDocs.forEach(docu -> log.info(convertDocumentForPrint(docu)));
+                similarDocs.forEach(this::convertDocumentForPrint);
                 knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
             }
         }
         return knowledgeContext;
     }
 
-    private String filterThinkAnswer(String rawResponse){
+    public String getExpertKonwledge(){
+        String sql = "select concat(' - ',explanation) as expertKnowledge from sys_expert_rules";
+        return jdbcTemplate.queryForList(sql).stream().map(m -> String.valueOf(m.get("expertKnowledge"))).collect(Collectors.joining("\n"));
+    }
+
+    private String filterThinkAnswer(String rawResponse) {
         // 使用正则表达式：(?s) 表示让 . 匹配包括换行符在内的所有字符
         // <think>.*?</think> 匹配从开始标签到结束标签的所有内容
         return rawResponse.replaceAll("(?s)^.*?</think>", "").trim();
     }
 
-    private String convertDocumentForPrint(Document document){
-        return ">>> 元数据 %s  ID %s".formatted(json.parseObject(document.getMetadata()),document.getId());
+    private void convertDocumentForPrint(Document document) {
+        log.info(">>> 元数据 %s  ID %s".formatted(json.parseObject(document.getMetadata()), document.getId()));
     }
 
-    private List<Map<String, Object>> BM25Search(String requirement,int size){
+    private List<Map<String, Object>> BM25Search(String requirement, int size) {
         String sql = """
                 SELECT id, content,
                        MATCH(content) AGAINST('%s' IN NATURAL LANGUAGE MODE) AS score
@@ -225,7 +241,7 @@ public class LLMUtil {
                 WHERE MATCH(content) AGAINST('%s' IN NATURAL LANGUAGE MODE)
                 ORDER BY score DESC
                 LIMIT %d
-                """.formatted(requirement,requirement,size);
+                """.formatted(requirement, requirement, size);
         return jdbcTemplate.queryForList(sql);
     }
 

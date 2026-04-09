@@ -45,7 +45,7 @@ public class KnowledgeService {
         return jdbcTemplate.queryForList(sql);
     }
 
-    @Scheduled(fixedDelay = 60000 * 10)
+    @Scheduled(fixedDelay = 60000 * 60)
     private void refreshVectorStore() throws SQLException {
         // 查询未向量化的数据
         String sql = "select id,keyword,explanation,category from sys_expert_rules where keyword is not null and keyword != ''";

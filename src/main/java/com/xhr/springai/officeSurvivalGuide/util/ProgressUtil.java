@@ -18,7 +18,8 @@ import java.util.Map;
 
 /**
  * 工作流程管理，保存从接到用户请求到返回用户内容的过程
- * */
+ *
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -34,30 +35,38 @@ public class ProgressUtil {
 
     private final RedisUtil redis;
 
-    public Flux<String> processMessage(String requirement){
+    public Flux<String> processMessage(String requirement) {
         //语义识别
         IntentClassification ic = route.routeSemantic(requirement);
         String key = DigestUtils.md5DigestAsHex(json.parseObject(ic).getBytes());
-        INTENT it = ic.getIntent();
-        log.info("it {}",it);
 
-        if (EnumSet.of(INTENT.reason_analysis,INTENT.progress_status,INTENT.solution_action,INTENT.definition_explain).contains(it)) {
+        INTENT it = INTENT.other;
+        if (ic != null) {
+            it = ic.getIntent();
+            log.info("用户输入 {} 重写为 {}",requirement,ic.getQuery_rewrite());
+            requirement = ic.getQuery_rewrite();
+        }
+        log.info("it {}", it);
+
+        if (EnumSet.of(INTENT.reason_analysis, INTENT.progress_status, INTENT.solution_action, INTENT.definition_explain).contains(it)) {
             log.info("用户提问知识类问题");
-            redis.setObject(key,ic);
+            redis.setObject(key, ic);
             return knowledge(requirement);
         } else if (EnumSet.of(INTENT.count_stat).contains(it)) {
             log.info("用户提问数据库类问题");
+            String finalRequirement = requirement;
             return writeSQL(requirement).flatMap(content -> {
                 log.info("content: {}", content);
 
                 if ("NO_TABLE".equals(content)) {
-                    return knowledge(requirement);
+                    return knowledge(finalRequirement);
                 } else {
                     return Flux.just(content);
                 }
             });
         } else {
             log.info("未知分类问题 {}", requirement);
+            redis.setObject(key, ic);
             return knowledge(requirement);
         }
     }
@@ -68,10 +77,12 @@ public class ProgressUtil {
                 你是一个知识库问答助手。
                 请参考以下背景信息来回答用户的问题。如果背景信息中没有相关内容，请礼貌地告知你不知道。
                 
+                %s
+                
                 请先列出参考资料中明确提到的字段和说明。
                 禁止推理：如果参考资料中没有提到某个参数的逻辑，请直接跳过，严禁根据字段名猜测其含义。
                 如果资料不足以支持完整回答，请在回答末尾注明“部分内容缺失”。
-                """;
+                """.formatted(llm.getExpertKonwledge());
         log.info("knowledge vectorString: {}", llm.vectorString(requirement));
         return llm.callWithPurificationAndKnowledgeStream(requirement, purification, systemInstructions, 50, 0.5);
     }
@@ -84,14 +95,14 @@ public class ProgressUtil {
             return NO_TABLE;
         }
 
-        if (RetrySynchronizationManager.getContext() != null && RetrySynchronizationManager.getContext().getRetryCount() > 0){
+        if (RetrySynchronizationManager.getContext() != null && RetrySynchronizationManager.getContext().getRetryCount() > 0) {
             requirement += " 之前生成的句子有SQL语法问题，请仔细检查语法。";
         }
 
-        log.info("requirement {}",requirement);
+        log.info("requirement {}", requirement);
 
         //查询是否有相关表
-        String vectorResult = llm.vectorSearch(requirement, 10, 0.5,"表定义");
+        String vectorResult = llm.vectorSearch(requirement, 10, 0.5, "表定义");
         log.info("vectorString: {}", llm.vectorString(requirement));
         log.debug("writeSQL vectorResult {}", vectorResult);
 
@@ -102,7 +113,7 @@ public class ProgressUtil {
                     表定义是
                     %s
                     """.formatted(vectorResult);
-            String tableName = llm.callForString(requirement,sqlPrompt);
+            String tableName = llm.callForString(requirement, sqlPrompt);
             log.info("tableName: {}", tableName);
 
             if (tableName != null) {
@@ -132,15 +143,15 @@ public class ProgressUtil {
                     log.info("resultJSON: {}", resultJSON);
 
                     String sqlPrompt3 = """
-                        请根据用户要求
-                        %s，
-                        结合示例数据
-                        %s，
-                        结合表结构
-                        %s，
-                        组织给用户的回复。
-                        回答用户问题时，不要提及数据库的表结构和你的统计思路，根据用户问题回答即可，直接告诉用户答案。
-                        """.formatted(requirement, resultJSON, ddl);
+                            请根据用户要求
+                            %s，
+                            结合示例数据
+                            %s，
+                            结合表结构
+                            %s，
+                            组织给用户的回复。
+                            回答用户问题时，不要提及数据库的表结构和你的统计思路，根据用户问题回答即可，直接告诉用户答案。
+                            """.formatted(requirement, resultJSON, ddl);
                     return Flux.just(llm.callUserStatement(sqlPrompt3));
                 } catch (Exception e) {
                     e.printStackTrace();
