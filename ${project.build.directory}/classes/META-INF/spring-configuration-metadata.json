@@ -1,0 +1,21 @@
+{
+  "groups": [
+    {
+      "name": "spring.datasource.pg",
+      "type": "javax.sql.DataSource",
+      "sourceType": "com.xhr.springai.officeSurvivalGuide.config.DataSourceConfig",
+      "sourceMethod": "pgDataSource()"
+    },
+    {
+      "name": "spring.datasource.tidb",
+      "type": "javax.sql.DataSource",
+      "sourceType": "com.xhr.springai.officeSurvivalGuide.config.DataSourceConfig",
+      "sourceMethod": "tidbDataSource()"
+    }
+  ],
+  "properties": [],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
