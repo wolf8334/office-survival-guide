@@ -81,9 +81,12 @@ public class ProgressUtil {
                 
                 请先列出参考资料中明确提到的字段和说明。
                 禁止推理：如果参考资料中没有提到某个参数的逻辑，请直接跳过，严禁根据字段名猜测其含义。
-                如果资料不足以支持完整回答，请在回答末尾注明“部分内容缺失”。
+                如果资料不足以支持完整回答，请在回答末尾注明具体情况及原因。
+                请完整、详尽地回答问题，确保回答不被打断。
+                提供给你的资料的每个部分都同样重要，不能因为位置原因忽略。
+                回答时只基于资料本身，不要说"资料里没有"。
                 """.formatted(llm.getExpertKonwledge());
-        log.info("knowledge vectorString: {}", llm.vectorString(requirement));
+        //log.info("knowledge vectorString: {}", llm.vectorString(requirement));
         return llm.callWithPurificationAndKnowledgeStream(requirement, purification, systemInstructions, 50, 0.5);
     }
 
@@ -103,7 +106,7 @@ public class ProgressUtil {
 
         //查询是否有相关表
         String vectorResult = llm.vectorSearch(requirement, 10, 0.5, "表定义");
-        log.info("vectorString: {}", llm.vectorString(requirement));
+        //log.info("vectorString: {}", llm.vectorString(requirement));
         log.debug("writeSQL vectorResult {}", vectorResult);
 
         if (!vectorResult.isEmpty()) {

@@ -2,14 +2,12 @@ package com.xhr.springai.officeSurvivalGuide.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.xhr.springai.officeSurvivalGuide.util.JSONUtil;
+import com.xhr.springai.officeSurvivalGuide.util.PDFUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
 import org.apache.tika.io.TikaInputStream;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.ExtractedTextFormatter;
-import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
-import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +17,13 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,6 +33,7 @@ public class RerankService {
 
     private final JdbcTemplate jdbcTemplate;
     private final JSONUtil json;
+    private final PDFUtil pdf;
 
     @Value("${spring.ai.openai.base-url}")
     private String baseUrl;
@@ -73,7 +76,7 @@ public class RerankService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
 
-        log.info("rerank返回 {}",response);
+        //log.info("rerank返回 {}",response);
 
         // 处理返回结果 (results 包含 index 和 relevance_score)
         List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
@@ -94,9 +97,10 @@ public class RerankService {
         return sortedDocs;
     }
 
-    public List<Document> tikaReader(Resource resource){
+    public List<Document> tikaReader(MultipartFile file){
         List<Document> finalChunks = new ArrayList<>();
 
+        Resource resource = file.getResource();
         String filename = resource.getFilename();
         String fileType = getResourceType(resource);
 
@@ -108,32 +112,7 @@ public class RerankService {
         }
 
         if ("pdf".equalsIgnoreCase(fileType)){
-            // 如果是PDF文件，使用POFBox处理
-            // 1. 初始化 PDF 读取器配置
-            PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
-                    .withPageTopMargin(0).withPageExtractedTextFormatter(ExtractedTextFormatter.builder()
-                            .withNumberOfTopTextLinesToDelete(0).build()).withPagesPerDocument(1).build();
-
-            // 2. 创建读取器，加载资源
-            PagePdfDocumentReader pdfReader = new PagePdfDocumentReader(resource, config);
-
-            // 3. 获取按页划分的原始文档（一页为一个 Document 对象）
-            List<Document> pages = pdfReader.get();
-
-            for (Document page : pages) {
-                // 获取当前页的页码元数据
-                Object pageNum = page.getMetadata().get("page_number");
-
-                // 使用统一的PageNum和filename
-                page.getMetadata().remove("page_number");
-                page.getMetadata().remove("file_name");
-
-                page.getMetadata().put("pageNum", pageNum);
-                page.getMetadata().put("filename", resource.getFilename());
-                page.getMetadata().put("fileType", fileType);
-
-                finalChunks.add(page);
-            }
+            finalChunks = pdf.readPDF(file,fileType);
         } else {
             // 使用Tika读取并解析为 Document 对象列表
             TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
@@ -159,8 +138,8 @@ public class RerankService {
         String clean = "delete from knowledge_chunks where doc_id = '%s'".formatted(documents.getFirst().getMetadata().get("filename"));
         jdbcTemplate.execute(clean);
 
-        String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values ('%s','%s','%s','%s');";
-        documents.forEach(doc -> jdbcTemplate.execute(sql.formatted(doc.getId(),doc.getMetadata().get("filename"),doc.getText(),json.parseObject(doc.getMetadata()))));
+        String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values ('%s',?,?,'%s');";
+        documents.forEach(doc -> jdbcTemplate.update(sql.formatted(doc.getId(),json.parseObject(doc.getMetadata())),doc.getMetadata().get("filename"),doc.getText()));
     }
 
     public String getResourceType(Resource resource){
@@ -176,8 +155,8 @@ public class RerankService {
         String filename = documents.getFirst().getMetadata().get("filename").toString();
         List<Integer> pageNums = documents.stream().map(doc -> Integer.parseInt(doc.getMetadata().get("pageNum").toString())).distinct().toList();
         String sql = """
-                select * from knowledge_chunks where metadata->>'$.filename' = '%s' and metadata->>'$.pageNum' in (%s)
-                order by metadata->>'$.pageNum',metadata->>'$.chunk_index'
+                select * from knowledge_chunks where metadata->>'$.filename' = '%s' and metadata->>'$.pageNum' + 0 in (%s)
+                order by metadata->>'$.pageNum' + 0,metadata->>'$.chunk_index' + 0
                 """.formatted(filename,String.join(",",pageNums.stream().map(String::valueOf).collect(Collectors.joining(","))));
         log.info("getFullDocument {}",sql);
 
@@ -198,6 +177,16 @@ public class RerankService {
             case "application/vnd.ms-excel" -> "xls";
             case "application/vnd.ms-powerpoint" -> "ppt";
             case "application/pdf" -> "pdf";
+            case "image/apng" -> "apng";
+            case "image/avif" -> "avif";
+            case "image/gif" -> "gif";
+            case "image/jpeg" -> "jpeg";
+            case "image/png" -> "png";
+            case "image/svg+xml" -> "svg";
+            case "image/webp" -> "webp";
+            case "audio/wave", "audio/wav", "audio/x-wav", "audio/x-pn-wav" -> "wav";
+            case "audio/webm","video/webm" -> "webm";
+            case "audio/ogg","video/ogg","application/ogg" -> "ogg";
             default -> mimeType;
         };
     }

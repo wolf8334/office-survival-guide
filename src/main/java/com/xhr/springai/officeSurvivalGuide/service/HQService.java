@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StopWatch;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.util.*;
@@ -29,15 +31,20 @@ public class HQService {
         return progress.processMessage(requirement);
     }
 
-    public String processFile(Resource resource) {
-        List<Document> splitDocs = rerank.tikaReader(resource);
+    public String processFile(MultipartFile file) {
+        List<Document> splitDocs = rerank.tikaReader(file);
         return splitDocs.stream().map(document ->
                 llm.callUserStatement("请根据下列正文，提炼总结文章内容。回复中不要包含markdown格式。%s".formatted(document.getText()))).collect(Collectors.joining("\n"));
     }
 
-    public String vectorize(Resource resource) {
+    public String vectorize(MultipartFile file) {
+        StopWatch sw = new StopWatch();
+        sw.start();
+
+        Resource resource = file.getResource();
         String filename = resource.getFilename();
-        List<Document> splitDocs = rerank.tikaReader(resource);
+
+        List<Document> splitDocs = rerank.tikaReader(file);
 
         List<Document> list = new ArrayList<>();
         splitDocs.forEach(document -> {
@@ -61,6 +68,10 @@ public class HQService {
         rerank.addDocumentToMySQL(list);
         log.info("文档 {} 入库完毕",filename);
 
-        return "文档入库完成";
+        sw.stop();
+        String pp = sw.prettyPrint();
+        String summary = sw.shortSummary();
+
+        return "文档入库完成 %s \n %s".formatted(summary,pp);
     }
 }

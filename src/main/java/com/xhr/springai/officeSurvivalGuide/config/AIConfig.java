@@ -39,6 +39,9 @@ public class AIConfig {
     @Value("${custom.qwen-name}")
     private String qwenName;
 
+    @Value("${custom.vl-name}")
+    private String vlName;
+
     @Value("${custom.maxMessage}")
     private int maxMessage;
 
@@ -79,6 +82,17 @@ public class AIConfig {
                 .defaultSystem("你是一位优秀的重排序专家，协助用户完成重排序工作。")
                 .defaultAdvisors(tokenAdvisor)
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory()).build())
+                .defaultOptions(options).build();
+    }
+
+    @Bean("vlClient")
+    public ChatClient vlClient(@NonNull ChatClient.Builder builder, TokenAdvisor tokenAdvisor) {
+        log.info("加载识别专家模型 {}", vlName);
+        OpenAiChatOptions options = OpenAiChatOptions.builder().model(vlName).stop(List.of("```", "```json")).build();
+
+        return builder.clone()
+                .defaultSystem("你是一位优秀的图片识别专家，协助用户完成图片识别工作。")
+                .defaultAdvisors(tokenAdvisor)
                 .defaultOptions(options).build();
     }
 

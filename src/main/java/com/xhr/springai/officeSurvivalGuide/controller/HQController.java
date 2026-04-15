@@ -35,11 +35,11 @@ public class HQController {
 
     @PostMapping("/summarize")
     public String summarize(@RequestParam("file") MultipartFile file) {
-        return service.processFile(file.getResource());
+        return service.processFile(file);
     }
 
     @PostMapping("/vectorize")
     public String vectorize(@RequestParam("file") MultipartFile file) {
-        return service.vectorize(file.getResource());
+        return service.vectorize(file);
     }
 }

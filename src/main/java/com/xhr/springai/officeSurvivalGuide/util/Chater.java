@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -34,6 +35,22 @@ public class Chater implements ICaller {
 
     public Flux<String> callFlux(String vectorResult, String afterPurified) {
         return chatClient.prompt().user(u -> u.text(" 背景知识：{context} 用户问题：{query}").param("context", vectorResult).param("query", afterPurified))
-                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, fluxConversationId)).stream().content();
+                .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, fluxConversationId)).stream().chatClientResponse().doOnNext(chunk -> {
+                    ChatGenerationMetadata metadata = null;
+                    if (chunk.chatResponse() != null) {
+                        metadata = chunk.chatResponse().getResult().getMetadata();
+                        // 获取停止原因
+                        String stopReason = metadata.getFinishReason();
+                        if (stopReason != null && !stopReason.isEmpty() && !stopReason.equalsIgnoreCase("STOP")) {
+                            log.info("流停止原因: " + stopReason);
+                        }
+                    }
+                }).map(chunk ->{
+                    String content = null;
+                    if (chunk.chatResponse() != null) {
+                        content = chunk.chatResponse().getResult().getOutput().getText();
+                    }
+                    return content != null ? content : "";
+                });
     }
 }
