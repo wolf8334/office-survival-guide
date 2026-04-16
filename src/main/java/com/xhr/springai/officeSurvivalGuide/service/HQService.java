@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StopWatch;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
@@ -38,8 +37,6 @@ public class HQService {
     }
 
     public String vectorize(MultipartFile file) {
-        StopWatch sw = new StopWatch();
-        sw.start();
 
         Resource resource = file.getResource();
         String filename = resource.getFilename();
@@ -68,10 +65,6 @@ public class HQService {
         rerank.addDocumentToMySQL(list);
         log.info("文档 {} 入库完毕",filename);
 
-        sw.stop();
-        String pp = sw.prettyPrint();
-        String summary = sw.shortSummary();
-
-        return "文档入库完成 %s \n %s".formatted(summary,pp);
+        return "文档入库完成";
     }
 }

@@ -1,5 +1,7 @@
 package com.xhr.springai.officeSurvivalGuide.advisor;
 
+import com.xhr.springai.officeSurvivalGuide.service.TokenBucketService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClientRequest;
@@ -16,13 +18,18 @@ import reactor.core.publisher.Flux;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Component
+@RequiredArgsConstructor
 public class TokenAdvisor implements CallAdvisor, StreamAdvisor {
 
     private static final Logger log = LoggerFactory.getLogger(TokenAdvisor.class);
+    private final TokenBucketService tokenBucket;
+
 
     @Override
     @NonNull
     public ChatClientResponse adviseCall(@NonNull ChatClientRequest chatClientRequest, @NonNull CallAdvisorChain callAdvisorChain) {
+        tokenBucket.reserveTokens();
+
         ChatClientResponse response = callAdvisorChain.nextCall(chatClientRequest);
 
         if (response.chatResponse() != null) {
@@ -36,6 +43,7 @@ public class TokenAdvisor implements CallAdvisor, StreamAdvisor {
     @NonNull
     public Flux<ChatClientResponse> adviseStream(@NonNull ChatClientRequest chatClientRequest, @NonNull StreamAdvisorChain streamAdvisorChain) {
         AtomicReference<Usage> lastUsage = new AtomicReference<>();
+        tokenBucket.reserveTokens();
 
         return streamAdvisorChain.nextStream(chatClientRequest).doOnNext(advisedResponse -> {
             if (advisedResponse.chatResponse() != null) {
@@ -59,10 +67,20 @@ public class TokenAdvisor implements CallAdvisor, StreamAdvisor {
 
     private void logToken(@NonNull Usage usage){
 
-        Integer promptTokens = usage.getPromptTokens();      // 输入的 Token
-        Integer completionTokens = usage.getCompletionTokens(); // 模型输出的 Token
-        Integer totalTokens = usage.getTotalTokens();           // 总计
+        long estimated = tokenBucket.getReversedTokens();
 
-        log.info("TokenAdvisor 本次请求消耗Token -> 输入: {}, 输出: {}, 总计: {}",promptTokens, completionTokens, totalTokens);
+        // 输入的 Token
+        Integer promptTokens = usage.getPromptTokens();
+
+        // 模型输出的 Token
+        Integer completionTokens = usage.getCompletionTokens();
+
+        // 总计
+        Integer totalTokens = usage.getTotalTokens();
+
+        // 获取实际消耗，修正差值
+        tokenBucket.settle(estimated, totalTokens);
+
+        log.info("本次请求消耗Token -> 输入: {}, 输出: {}, 总计: {}",promptTokens, completionTokens, totalTokens);
     }
 }

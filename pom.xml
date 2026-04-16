@@ -211,6 +211,13 @@
             <version>3.0.7</version>
         </dependency>
 
+        <!-- Bucket4j token限流 -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-core</artifactId>
+            <version>8.18.0</version>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>

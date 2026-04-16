@@ -41,7 +41,7 @@ public class ProgressUtil {
         String key = DigestUtils.md5DigestAsHex(json.parseObject(ic).getBytes());
 
         INTENT it = INTENT.other;
-        if (ic != null) {
+        if (ic != null && !ic.getQuery_rewrite().isEmpty()) {
             it = ic.getIntent();
             log.info("用户输入 {} 重写为 {}",requirement,ic.getQuery_rewrite());
             requirement = ic.getQuery_rewrite();

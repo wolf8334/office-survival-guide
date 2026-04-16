@@ -74,9 +74,6 @@ spring:
           dimensions: 4096
     vectorstore:
       qdrant:
-
-
-
         host: ${QDRANT_URL}
         port: ${QDRANT_PORT}
         api-key: ${QDRANT_API_KEY}
@@ -96,7 +93,7 @@ spring:
             platform: mysql
 
 custom:
-  coder-name: Qwen/Qwen2.5-Coder-7B-Instruct
+  coder-name: Qwen/Qwen2.5-7B-Instruct
   qwen-name: Qwen/Qwen3-8B
   embedding-name: Qwen/Qwen3-Embedding-8B
   rerank-name: Qwen/Qwen3-Reranker-8B

@@ -40,7 +40,6 @@ public class PDFUtil {
         Resource resource = file.getResource();
 
 
-
         PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
                 .withPageTopMargin(0).withPageExtractedTextFormatter(ExtractedTextFormatter.builder()
                         .withNumberOfTopTextLinesToDelete(0).build()).withPagesPerDocument(1).build();
@@ -51,10 +50,10 @@ public class PDFUtil {
         // 3. 获取按页划分的原始文档（一页为一个 Document 对象）
         List<Document> pages = pdfReader.get();
 
-        log.info("读取PDF得到 {} 页",pages.size());
+        log.info("读取PDF得到 {} 页", pages.size());
 
         if (pages.isEmpty() || needOCR(pages.getFirst())) {
-            log.info("需要识别图片 {}",resource.getFilename());
+            log.info("需要识别图片 {}", resource.getFilename());
             try {
                 // 提取该页为图片
                 File tempFile = File.createTempFile("pdf_", ".pdf");
@@ -65,15 +64,15 @@ public class PDFUtil {
 
                 int page_number = 1;
                 for (String doc_content : docs) {
-                    Map<String,Object> metadata = Map.of("chunk_index",0,"pageNum",page_number++,"fileType",fileType,"total_chunks",1);
-                    list.add(new Document(doc_content,metadata));
+                    Map<String, Object> metadata = Map.of("chunk_index", 0, "pageNum", page_number++, "fileType", fileType, "total_chunks", 1);
+                    list.add(new Document(doc_content, metadata));
                 }
-                log.info("文件 {} 识别完成",resource.getFilename());
+                log.info("文件 {} 识别完成", resource.getFilename());
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
-            log.info("{} 不需要识别图片，共有{}组",resource.getFilename(),pages.size());
+            log.info("{} 不需要识别图片，共有{}组", resource.getFilename(), pages.size());
 
             for (Document page : pages) {
                 // 获取当前页的页码元数据
@@ -90,7 +89,7 @@ public class PDFUtil {
                 list.add(page);
             }
         }
-        log.info("读取PDF得到{}组结果数据",list.size());
+        log.info("读取PDF得到{}组结果数据", list.size());
         return list;
     }
 
@@ -140,36 +139,40 @@ public class PDFUtil {
     }
 
     private List<String> extractPageAsImage(String pdfPath) throws IOException {
-        try (PDDocument document = Loader.loadPDF(new File(pdfPath))) {
-            int totalPage = document.getNumberOfPages();
-            log.info("totalPage {}",totalPage);
+        int totalPage = getPDFPages(pdfPath);
 
-            PDFRenderer renderer = new PDFRenderer(document);
-
-            return IntStream.range(0, totalPage)
-                    .boxed()
-                    .gather(Gatherers.windowFixed(3))
-                    .flatMap(batch -> {
-                        try (var scope = StructuredTaskScope.open(StructuredTaskScope.Joiner.<String>awaitAllSuccessfulOrThrow())) {
-                            // 结构化并发：并行处理当前批次的页面
-                            var subtasks = batch.stream().map(pageIndex -> scope.fork(() -> {
-                                BufferedImage image;
-                                synchronized (document) {
-                                    image = renderer.renderImageWithDPI(pageIndex, 300);
-                                }
-                                String result = vl.call("请识别此图片，返回图片上的内容",imageToBase64(image));
+        return IntStream.range(0, totalPage)
+                .boxed()
+                .gather(Gatherers.windowFixed(5))
+                .flatMap(batch -> {
+                    try (var scope = StructuredTaskScope.open(StructuredTaskScope.Joiner.<String>awaitAllSuccessfulOrThrow())) {
+                        // 结构化并发：并行处理当前批次的页面
+                        var subtasks = batch.stream().map(pageIndex -> scope.fork(() -> {
+                            try (PDDocument docu = Loader.loadPDF(new File(pdfPath))) {
+                                var renderer = new PDFRenderer(docu);
+                                BufferedImage image = renderer.renderImageWithDPI(pageIndex, 300);
+                                String result = vl.call("请识别此图片，返回图片上的内容", imageToBase64(image));
                                 image.flush(); // 显式释放内存
+                                log.info("pageIndex {} 共 {}",pageIndex,totalPage);
                                 return result;
-                            })).toList();
+                            }
+                        })).toList();
 
-                            scope.join();
-                            return subtasks.stream().map(StructuredTaskScope.Subtask::get);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                        return Stream.empty();
-                    }).toList();
+                        scope.join();
+                        return subtasks.stream().map(StructuredTaskScope.Subtask::get);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    return Stream.empty();
+                }).toList();
+    }
+
+    private int getPDFPages(String pdfPath) {
+        try (PDDocument document = Loader.loadPDF(new File(pdfPath))) {
+            return document.getNumberOfPages();
+        } catch (IOException _) {
         }
+        return 0;
     }
 
     private String imageToBase64(BufferedImage image) throws IOException {
