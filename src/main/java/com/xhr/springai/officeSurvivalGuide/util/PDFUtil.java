@@ -143,7 +143,7 @@ public class PDFUtil {
 
         return IntStream.range(0, totalPage)
                 .boxed()
-                .gather(Gatherers.windowFixed(5))
+                .gather(Gatherers.windowFixed(3))
                 .flatMap(batch -> {
                     try (var scope = StructuredTaskScope.open(StructuredTaskScope.Joiner.<String>awaitAllSuccessfulOrThrow())) {
                         // 结构化并发：并行处理当前批次的页面

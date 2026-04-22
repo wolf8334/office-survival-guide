@@ -93,11 +93,16 @@ spring:
             platform: mysql
 
 custom:
-  coder-name: Qwen/Qwen2.5-7B-Instruct
+  coder-name: Pro/deepseek-ai/DeepSeek-V3.2
+  coder-tokens: 50000
   qwen-name: Qwen/Qwen3-8B
+  qwen-tokens: 50000
   embedding-name: Qwen/Qwen3-Embedding-8B
+  embedding-tokens: 1000000
   rerank-name: Qwen/Qwen3-Reranker-8B
+  rerank-tokens: 1000000
   vl-name: PaddlePaddle/PaddleOCR-VL
+  vl-tokens: 80000
   maxMessage: 1
   maxToken: 500
   chunkSize: 200

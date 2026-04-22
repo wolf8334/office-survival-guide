@@ -42,6 +42,18 @@ public class AIConfig {
     @Value("${custom.vl-name}")
     private String vlName;
 
+    @Value("${custom.coder-tokens}")
+    private long coderToken;
+
+    @Value("${custom.embedding-tokens}")
+    private long embeddingToken;
+
+    @Value("${custom.qwen-tokens}")
+    private long qwenToken;
+
+    @Value("${custom.vl-tokens}")
+    private long vlToken;
+
     @Value("${custom.maxMessage}")
     private int maxMessage;
 

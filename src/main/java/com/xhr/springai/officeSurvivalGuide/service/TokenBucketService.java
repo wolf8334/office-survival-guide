@@ -11,16 +11,32 @@ import java.time.Duration;
 @Slf4j
 public class TokenBucketService {
 
-    private static final long MAX_TOKEN = 50000L;
-    private static final double ratio = 0.6;
-    private static final long ESTIMATED_TOKENS = 3000L;
-    private static final long CAPACITY         = (long) (MAX_TOKEN * ratio);
-    private static final long REFILL_PER_MIN   = (long) (MAX_TOKEN * ratio);
-    private static final long LOW_WATERMARK    = (long) (CAPACITY * 0.05);
+    private final long MAX_TOKEN;
+    private final double ratio = 0.8;
+    private final long ESTIMATED_TOKENS = 3000L;
+    private final long CAPACITY;
+    private final long REFILL_PER_MIN;
+    private final long LOW_WATERMARK;
 
     private final Bucket bucket;
 
     public TokenBucketService() {
+        MAX_TOKEN = 50000L;
+        CAPACITY = (long) (MAX_TOKEN * ratio);
+        REFILL_PER_MIN = (long) (MAX_TOKEN * ratio);
+        LOW_WATERMARK = (long) (CAPACITY * 0.05);
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(CAPACITY)
+                .refillGreedy(REFILL_PER_MIN, Duration.ofMinutes(1))
+                .build();
+        this.bucket = Bucket.builder().addLimit(limit).build();
+    }
+
+    public TokenBucketService(long maxToken) {
+        MAX_TOKEN = maxToken;
+        CAPACITY = (long) (MAX_TOKEN * ratio);
+        REFILL_PER_MIN = (long) (MAX_TOKEN * ratio);
+        LOW_WATERMARK = (long) (CAPACITY * 0.05);
         Bandwidth limit = Bandwidth.builder()
                 .capacity(CAPACITY)
                 .refillGreedy(REFILL_PER_MIN, Duration.ofMinutes(1))

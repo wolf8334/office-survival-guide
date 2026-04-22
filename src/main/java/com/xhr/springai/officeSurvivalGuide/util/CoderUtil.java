@@ -24,16 +24,16 @@ public class CoderUtil {
 
     /***
      * 调用LLM，不包含对用户输入的提炼，不包含向量库信息
-     * @param requirement 用户输入
-     * @param expansionPrompt 提示词
+     * @param systemPrompt 用户输入
+     * @param userPrompt 提示词
      * */
-    public String callForString(String requirement, String expansionPrompt) {
-        if (requirement.isBlank()) {
-            requirement = "用户啥也没说，你替他说两句好听的。";
+    public String callForString(String systemPrompt, String userPrompt) {
+        if (userPrompt.isBlank()) {
+            userPrompt = "用户啥也没说，你替他说两句好听的。";
         }
 
         // 1 分析用户输入
-        String translated = filterThinkAnswer(coder.call(expansionPrompt, requirement));
+        String translated = filterThinkAnswer(coder.call(systemPrompt, userPrompt));
 
         log.info("大模型回答 {}", translated);
 
@@ -121,8 +121,10 @@ public class CoderUtil {
     }
 
     private String filterThinkAnswer(String rawResponse){
-        // 使用正则表达式：(?s) 表示让 . 匹配包括换行符在内的所有字符
-        // <think>.*?</think> 匹配从开始标签到结束标签的所有内容
-        return rawResponse.replaceAll("(?s)^.*?</think>", "").trim();
+        // 使用正则表达式：(?s) 表示让 . 匹配包括换行符在内的所有字符 <think>.*?</think> 匹配从开始标签到结束标签的所有内容
+        log.debug("rawResponse {}",rawResponse);
+        return rawResponse.contains("</think>")
+                ? rawResponse.replaceAll("(?s).*?</think>", "").trim()
+                : rawResponse.trim();
     }
 }
