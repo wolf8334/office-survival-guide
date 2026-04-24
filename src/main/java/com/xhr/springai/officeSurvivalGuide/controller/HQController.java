@@ -1,6 +1,5 @@
 package com.xhr.springai.officeSurvivalGuide.controller;
 
-import com.xhr.springai.officeSurvivalGuide.service.CodeService;
 import com.xhr.springai.officeSurvivalGuide.service.HQService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ public class HQController {
     private static final Logger log = LoggerFactory.getLogger(HQController.class);
 
     private final HQService service;
-    private final CodeService code;
 
     @Operation(method = "POST", description = "根据后勤业务知识，回答用户问题")
     @PostMapping(value = "/acknowledge", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -33,7 +31,6 @@ public class HQController {
         return service.acknowledge(userRequirement);
     }
 
-
     @PostMapping("/summarize")
     public String summarize(@RequestParam("file") MultipartFile file) {
         return service.processFile(file);
@@ -42,10 +39,5 @@ public class HQController {
     @PostMapping("/vectorize")
     public String vectorize(@RequestParam("file") MultipartFile file) {
         return service.vectorize(file);
-    }
-
-    @PostMapping("/code")
-    public String writeCode(@RequestBody Map<String, String> param) {
-        return code.writeCode(param);
     }
 }

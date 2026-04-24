@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码生成</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; height: 100vh; display: flex; flex-direction: column; }
+
+        .topbar { height: 48px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0; }
+        .topbar-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+        .model-select { font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 20px; background: #f5f4f0; color: #555; cursor: pointer; outline: none; }
+        .model-select:focus { border-color: #aaa; }
+
+        .main { display: grid; grid-template-columns: 340px 1fr; flex: 1; overflow: hidden; }
+
+        .left { background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
+        .left-header { padding: 16px 18px 12px; border-bottom: 1px solid #f0eee8; }
+        .left-header h2 { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+        .left-header p { font-size: 11px; color: #888; margin-top: 2px; }
+        .left-body { flex: 1; padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+
+        .field-label { font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+
+        textarea {
+            width: 100%; resize: none; font-size: 13px; font-family: inherit;
+            border: 1px solid #e0ddd8; border-radius: 8px; padding: 10px 12px;
+            min-height: 100px; background: #faf9f7; color: #1a1a1a; outline: none;
+            line-height: 1.6;
+        }
+        textarea:focus { border-color: #bbb; background: #fff; }
+        textarea::placeholder { color: #bbb; }
+
+        .upload-zone {
+            border: 1.5px dashed #d8d5ce; border-radius: 8px; padding: 18px;
+            text-align: center; cursor: pointer; background: #faf9f7; transition: all 0.15s;
+        }
+        .upload-zone:hover { border-color: #aaa; background: #f5f4f0; }
+        .upload-zone .icon { font-size: 22px; margin-bottom: 6px; color: #999; }
+        .upload-zone .text { font-size: 12px; color: #666; }
+        .upload-zone .hint { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+        .file-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+        .file-item {
+            display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+            background: #faf9f7; border: 1px solid #e8e6e0; border-radius: 7px;
+        }
+        .file-badge {
+            width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center;
+            justify-content: center; font-size: 9px; font-weight: 600; flex-shrink: 0;
+        }
+        .badge-java { background: #fde8d8; color: #c04a00; }
+        .badge-vue { background: #d8f5e8; color: #0a7a3e; }
+        .badge-xml { background: #dde8fd; color: #1a4ab5; }
+        .file-name { flex: 1; font-size: 12px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { font-size: 11px; color: #aaa; }
+        .file-remove { font-size: 14px; color: #ccc; cursor: pointer; padding: 0 2px; line-height: 1; }
+        .file-remove:hover { color: #e05555; }
+
+        input[type="file"] { display: none; }
+
+        .send-btn {
+            width: 100%; padding: 10px; font-size: 13px; font-weight: 500;
+            border-radius: 8px; cursor: pointer; background: #1a1a1a; color: #fff;
+            border: none; transition: background 0.15s;
+        }
+        .send-btn:hover { background: #333; }
+        .send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+        .right { display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { padding: 12px 20px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .chat-header span { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #2ecc71; }
+
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #f5f4f0; }
+
+        .msg { display: flex; gap: 10px; max-width: 88%; }
+        .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+        .avatar {
+            width: 28px; height: 28px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 11px;
+            font-weight: 600; flex-shrink: 0; margin-top: 2px;
+        }
+        .avatar.ai { background: #1a1a1a; color: #fff; }
+        .avatar.user { background: #e0ddd8; color: #555; }
+
+        .bubble {
+            padding: 10px 14px; border-radius: 12px; font-size: 13px;
+            line-height: 1.65; max-width: 100%;
+        }
+        .bubble.ai { background: #fff; color: #1a1a1a; border-bottom-left-radius: 3px; border: 1px solid #e8e6e0; }
+        .bubble.user { background: #1a1a1a; color: #fff; border-bottom-right-radius: 3px; }
+
+        .analysis-list { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .analysis-row { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #444; }
+        .check { width: 14px; height: 14px; border-radius: 50%; background: #e8f5e9; border: 1px solid #a5d6a7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+        .check::after { content: '✓'; font-size: 8px; color: #2e7d32; }
+
+        .confirm-btns { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-confirm {
+            font-size: 12px; padding: 6px 16px; border-radius: 20px; cursor: pointer;
+            background: #1a1a1a; color: #fff; border: none; font-weight: 500;
+            transition: background 0.15s;
+        }
+        .btn-confirm:hover { background: #333; }
+        .btn-edit {
+            font-size: 12px; padding: 6px 16px; border-radius: 20px; cursor: pointer;
+            background: #fff; color: #555; border: 1px solid #ddd;
+            transition: background 0.15s;
+        }
+        .btn-edit:hover { background: #f5f4f0; }
+
+        .result-card {
+            border: 1px solid #c8e6c9; border-radius: 10px; padding: 12px 14px;
+            background: #f9fdf9; margin-top: 10px;
+        }
+        .result-title { font-size: 11px; font-weight: 600; color: #2e7d32; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .result-file { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e8f5e9; }
+        .result-file:last-of-type { border-bottom: none; }
+        .result-file span { font-size: 12px; color: #333; display: flex; align-items: center; gap: 6px; }
+        .result-file span::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #81c784; }
+        .dl-btn {
+            font-size: 11px; padding: 3px 12px; border-radius: 20px;
+            background: #fff; border: 1px solid #a5d6a7; cursor: pointer;
+            color: #2e7d32; font-weight: 500; transition: background 0.15s;
+        }
+        .dl-btn:hover { background: #e8f5e9; }
+        .dl-all {
+            width: 100%; margin-top: 10px; padding: 8px; font-size: 12px; font-weight: 500;
+            border-radius: 8px; cursor: pointer; background: #1a1a1a; color: #fff;
+            border: none; transition: background 0.15s;
+        }
+        .dl-all:hover { background: #333; }
+
+        .thinking { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fff; border-radius: 12px; font-size: 12px; color: #888; border: 1px solid #e8e6e0; }
+        .dots { display: flex; gap: 3px; }
+        .dots span { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #bbb; animation: blink 1.2s infinite; }
+        .dots span:nth-child(2) { animation-delay: 0.2s; }
+        .dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .empty-state .icon { font-size: 32px; color: #ccc; }
+        .empty-state p { font-size: 13px; color: #aaa; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <label for="modelSelect" class="topbar-title">代码生成工具</label>
+    <select style="display:none" class="model-select" id="modelSelect">
+        <option value="Pro/deepseek-ai/DeepSeek-V3.2">DeepSeek-V3.2</option>
+        <option value="anthropic/claude-opus-4.6">Claude Opus 4.6</option>
+    </select>
+</div>
+
+<div class="main">
+    <div class="left">
+        <div class="left-header">
+            <h2>输入</h2>
+            <p>描述需求 + 上传参考文件</p>
+        </div>
+        <div class="left-body">
+            <div>
+                <label for="promptInput" class="field-label">需求描述</label>
+                <textarea id="promptInput" placeholder="例如：基于某张表，生成某某信息的增删改查，包名 com.example.info，请求路径 /info/list"></textarea>
+            </div>
+            <div>
+                <label for="techInput" class="field-label">技术要求（选填）</label>
+                <textarea id="techInput" style="min-height:70px;" placeholder="例如：table高度用100%，列宽最小170px，下拉选项从接口获取，主要填写对代码生成的补充要求。"></textarea>
+            </div>
+            <div>
+                <div class="field-label">参考文件</div>
+                <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                    <div class="icon">↑</div>
+                    <div class="text">点击或拖拽上传参考文件</div>
+                    <div class="hint">支持 .java .vue .xml .js，最多 10 个</div>
+                </div>
+                <input type="file" id="fileInput" multiple accept=".java,.vue,.xml,.js,.ts" onchange="handleFiles(this.files)">
+                <div class="file-list" id="fileList"></div>
+            </div>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <div class="right">
+        <div class="chat-header">
+            <div class="status-dot"></div>
+            <span>对话</span>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="empty-state" id="emptyState">
+                <div class="icon">◎</div>
+                <p>填写需求并上传参考文件后发送</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const files = [];
+    let waitingConfirm = false;
+    let pendingPrompt = '';
+    let pendingAnalysis = '';
+    let pendingFiles = [];
+    let pendingToken = '';
+
+    const extBadge = {
+        java: { cls: 'badge-java', label: 'J' },
+        vue: { cls: 'badge-vue', label: 'V' },
+        xml: { cls: 'badge-xml', label: 'X' },
+        js: { cls: 'badge-java', label: 'JS' },
+        ts: { cls: 'badge-java', label: 'TS' },
+    };
+
+    function handleFiles(newFiles) {
+        for (const f of newFiles) {
+            if (files.length >= 10) break;
+            if (!files.find(x => x.name === f.name)) {
+                files.push(f);
+            }
+        }
+        renderFileList();
+    }
+
+    function renderFileList() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = files.map((f, i) => {
+            const ext = f.name.split('.').pop().toLowerCase();
+            const badge = extBadge[ext] || { cls: 'badge-xml', label: ext.toUpperCase().slice(0,2) };
+            const size = f.size < 1024 ? f.size + 'B' : (f.size/1024).toFixed(1) + 'kb';
+            return `<div class="file-item">
+      <div class="file-badge ${badge.cls}">${badge.label}</div>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${size}</span>
+      <span class="file-remove" onclick="removeFile(${i})">×</span>
+    </div>`;
+        }).join('');
+    }
+
+    function removeFile(i) {
+        files.splice(i, 1);
+        renderFileList();
+    }
+
+    const uploadZone = document.querySelector('.upload-zone');
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.style.borderColor = '#888'; });
+    uploadZone.addEventListener('dragleave', () => { uploadZone.style.borderColor = ''; });
+    uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.style.borderColor = ''; handleFiles(e.dataTransfer.files); });
+
+    function addMsg(role, html) {
+        const empty = document.getElementById('emptyState');
+        if (empty) empty.remove();
+        const body = document.getElementById('chatBody');
+        const div = document.createElement('div');
+        div.className = 'msg ' + role;
+        const label = role === 'ai' ? 'AI' : '我';
+        div.innerHTML = `<div class="avatar ${role}">${label}</div><div>${html}</div>`;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+        return div;
+    }
+
+    function addThinking() {
+        const empty = document.getElementById('emptyState');
+        if (empty) empty.remove();
+        const body = document.getElementById('chatBody');
+        const div = document.createElement('div');
+        div.className = 'msg ai';
+        div.id = 'thinking';
+        div.innerHTML = `<div class="avatar ai">AI</div>
+    <div class="thinking"><div class="dots"><span></span><span></span><span></span></div>分析中...</div>`;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function removeThinking() {
+        const t = document.getElementById('thinking');
+        if (t) t.remove();
+    }
+
+    async function sendMessage() {
+        const prompt = document.getElementById('promptInput').value.trim();
+        if (!prompt) {
+            alert('请填写需求描述');
+            return;
+        }
+
+        const model = document.getElementById('modelSelect').value;
+        pendingPrompt = prompt;
+
+        addMsg('user', `<div class="bubble user">${escHtml(prompt)}${files.length ? `<div style="margin-top:6px;font-size:11px;opacity:0.7">📎 ${files.length} 个文件</div>` : ''}</div>`);
+
+        document.getElementById('sendBtn').disabled = true;
+        addThinking();
+
+        // 把文件内容读出来
+        pendingFiles = await readFiles(files);;
+
+        // 第一次请求：分析
+        const res = await fetch('/coder/generate/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                prompt: prompt,
+                model: document.getElementById('modelSelect').value
+            })
+        });
+        const data = await res.json();
+
+        removeThinking();
+        showAnalysis(data);  // 后端返回解析结果
+    }
+
+    function showAnalysis(data) {
+        if (data.canGenerate) {
+            pendingAnalysis = data.summary;
+            addMsg('ai', `<div class="bubble ai">
+            我理解你的需求是：<br><br>
+            <div style="background:#f5f4f0;border-radius:8px;padding:10px 12px;font-size:12px;color:#444;line-height:1.7;">
+                ${escHtml(data.summary)}
+            </div>
+            <br>确认后开始生成代码。
+            <div class="confirm-btns">
+                <button class="btn-confirm" onclick="confirmGenerate()">对的，开始生成</button>
+                <button class="btn-edit" onclick="editRequest()">需要修改</button>
+            </div>
+        </div>`);
+            waitingConfirm = true;
+        } else {
+            addMsg('ai', `<div class="bubble ai">
+            暂时无法生成，原因如下：<br><br>
+            <div style="background:#fff8f5;border-radius:8px;padding:10px 12px;font-size:12px;color:#c04a00;line-height:1.7;border:1px solid #fde8d8;">
+                ${escHtml(data.reason)}
+            </div>
+            <br>请补充以上信息后重新发送。
+        </div>`);
+            document.getElementById('sendBtn').disabled = false;
+        }
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function confirmGenerate() {
+        if (!waitingConfirm) return;
+        waitingConfirm = false;
+        document.querySelectorAll('.confirm-btns').forEach(el => el.remove());
+
+        addMsg('user', '<div class="bubble user">对的，开始生成</div>');
+        document.getElementById('sendBtn').disabled = true;
+        addThinking();
+
+        try {
+            const res = await fetch('/coder/generate/code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    prompt: pendingPrompt,
+                    analysis: pendingAnalysis,
+                    files: pendingFiles,
+                    techRequirements: document.getElementById('techInput').value.trim(),
+                    model: document.getElementById('modelSelect').value
+                })
+            });
+
+            const data = await res.json();
+            removeThinking();
+            pendingToken = data.token;
+            showResult(data.files, data.downloadUrl);
+        } catch (e) {
+            removeThinking();
+            addMsg('ai', '<div class="bubble ai">生成失败，请稍后重试。</div>');
+            document.getElementById('sendBtn').disabled = false;
+        }
+    }
+
+    function editRequest() {
+        waitingConfirm = false;
+        document.querySelectorAll('.confirm-btns').forEach(el => el.remove());
+        addMsg('ai', '<div class="bubble ai">好的，请补充或修改你的需求描述，我重新理解后再确认。</div>');
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('promptInput').focus();
+    }
+
+    function showResult(fileList, downloadUrl) {
+        const rows = fileList.map(f =>
+            `<div class="result-file"><span>${f.name}</span><button class="dl-btn" onclick="downloadFile('${f.name}')">下载</button></div>`
+        ).join('');
+
+        addMsg('ai', `<div class="bubble ai">
+        生成完成，共 ${fileList.length} 个文件：
+        <div class="result-card">
+            <div class="result-title">生成结果</div>
+            ${rows}
+            <button class="dl-all" onclick="window.location.href='${downloadUrl}'">打包下载全部 zip</button>
+        </div>
+    </div>`);
+
+        document.getElementById('sendBtn').disabled = false;
+    }
+
+    function downloadFile(name) {
+        window.location.href = `/coder/generate/downloadFile?token=${pendingToken}&name=${encodeURIComponent(name)}`;
+    }
+
+    async function readFiles(fileList) {
+        const result = [];
+        for (const f of fileList) {
+            const content = await f.text();
+            result.push({ name: f.name, content: content });
+        }
+        return result;
+    }
+</script>
+</body>
+</html>

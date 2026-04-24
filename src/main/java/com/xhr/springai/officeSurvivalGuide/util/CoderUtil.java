@@ -35,7 +35,7 @@ public class CoderUtil {
         // 1 分析用户输入
         String translated = filterThinkAnswer(coder.call(systemPrompt, userPrompt));
 
-        log.info("大模型回答 {}", translated);
+        log.info("大模型回答 \n {}", translated);
 
         return translated;
     }
