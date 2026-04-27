@@ -4,7 +4,6 @@ import com.xhr.springai.officeSurvivalGuide.config.IntentClassification;
 import com.xhr.springai.officeSurvivalGuide.config.enums.INTENT;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.retry.support.RetrySynchronizationManager;
@@ -29,10 +28,7 @@ public class ProgressUtil {
     private final JSONUtil json;
     private final DBUtil dbUtil;
     private final SemanticRouting route;
-
-    @Qualifier("tidbJdbcTemplate")
     private final JdbcTemplate mysql;
-
     private final RedisUtil redis;
 
     public Flux<String> processMessage(String requirement) {

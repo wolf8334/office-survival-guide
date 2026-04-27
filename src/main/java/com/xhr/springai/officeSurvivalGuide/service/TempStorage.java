@@ -1,26 +1,23 @@
 package com.xhr.springai.officeSurvivalGuide.service;
 
-import org.springframework.scheduling.annotation.Scheduled;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Component
+@RequiredArgsConstructor
 public class TempStorage {
-    private final Map<String, byte[]> store = new ConcurrentHashMap<>();
+
+    private final RedisTemplate redisTemplate;
 
     public void put(String token, byte[] data) {
-        store.put(token, data);
+        redisTemplate.opsForValue().set(token,data,1, TimeUnit.DAYS);
     }
 
     public byte[] get(String token) {
-        return store.get(token);
+        return (byte[])redisTemplate.opsForValue().get(token);
     }
 
-    // 定时清理
-    @Scheduled(fixedDelay = 24 * 60 * 60 * 1000)
-    public void cleanup() {
-        store.clear();
-    }
 }

@@ -60,7 +60,7 @@ public class TokenBucketService {
 
             // 2. 预扣占位，阻塞直到令牌足够
             bucket.asBlocking().consume(ESTIMATED_TOKENS);
-        } catch (Exception _) {
+        } catch (Exception ignored) {
         }
 
     }

@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -45,7 +44,7 @@ public class KnowledgeService {
         return jdbcTemplate.queryForList(sql);
     }
 
-    @Scheduled(fixedDelay = 60000 * 60)
+    //@Scheduled(fixedDelay = 60000 * 60)
     private void refreshVectorStore() throws SQLException {
         // 查询未向量化的数据
         String sql = "select id,keyword,explanation,category from sys_expert_rules where keyword is not null and keyword != ''";

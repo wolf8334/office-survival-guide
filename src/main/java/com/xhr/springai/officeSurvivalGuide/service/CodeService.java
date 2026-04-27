@@ -125,7 +125,7 @@ public class CodeService {
             //codeWriter.writeFiles(codeWriter.split(files),javaBase,resourceBase,vueBase,uriPath,busiName,busiChnName);
 
             return "代码已写入";
-        } catch (IOException | JSQLParserException _) {
+        } catch (IOException | JSQLParserException ignored) {
         }
         return "默认代码生成结果";
     }
@@ -184,10 +184,13 @@ public class CodeService {
                     必须包括前端和后端代码。生成完整代码后，生成一个README.md文件，说明技术选型原因及代码文件应存放的目录
                     
                     输出格式：每个文件前一行写 ------文件名，紧接着是文件完整内容。
+                    如果你认为无法生成完整代码，必须说明具体原因，不能直接停止输出。
+                    
+                    %s
                     
                     经过整理的用户需求是
                     %s
-                    """.formatted(analysis);
+                    """.formatted(techRequirements,analysis);
 
             String userMessage = """
                     用户输入信息是
@@ -248,7 +251,7 @@ public class CodeService {
                     return zis.readAllBytes();
                 }
             }
-        } catch (IOException _) {
+        } catch (IOException ignored) {
         }
 
         return null;
