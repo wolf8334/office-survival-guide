@@ -2,6 +2,7 @@ package com.xhr.springai.officeSurvivalGuide.util;
 
 import com.xhr.springai.officeSurvivalGuide.bean.CommonData;
 import com.xhr.springai.officeSurvivalGuide.bean.Result;
+import com.xhr.springai.officeSurvivalGuide.client.ChaterClient;
 import com.xhr.springai.officeSurvivalGuide.service.RerankService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -23,7 +24,7 @@ public class LLMUtil {
 
     private static final Logger log = LoggerFactory.getLogger(LLMUtil.class);
 
-    private final Chater chater;
+    private final ChaterClient chat;
     private final VectorStoreUtil vectorStore;
     private final EmbeddingModel embeddingModel;
     private final JSONUtil json;
@@ -49,7 +50,7 @@ public class LLMUtil {
 
         expansionPrompt = expansionPrompt.formatted(knowledgeContext);
 
-        String translated = chater.call(expansionPrompt, afterPurified);
+        String translated = chat.call(expansionPrompt, afterPurified).getContent();
         log.info("AndKnowledge 大模型回答 {}", translated);
         return Result.success(requirement, translated);
     }
@@ -78,7 +79,7 @@ public class LLMUtil {
         String vectorResult = vectorSearch(afterPurified, topk, thresold);
         log.debug("流式响应 vectorResult {}", vectorResult);
 
-        return chater.callFlux(vectorResult, expansionPrompt + " " + afterPurified);
+        return chat.callFlux(vectorResult, expansionPrompt + " " + afterPurified);
     }
 
     /***
@@ -102,7 +103,7 @@ public class LLMUtil {
         }
 
         // 1 分析用户输入
-        String translated = filterThinkAnswer(chater.call(expansionPrompt, requirement));
+        String translated = filterThinkAnswer(chat.call(expansionPrompt, requirement).getContent());
 
         log.info("大模型回答 {}", translated);
         return translated;
@@ -114,7 +115,7 @@ public class LLMUtil {
         }
 
         // 1 分析用户输入
-        String translated = filterThinkAnswer(chater.call(requirement));
+        String translated = filterThinkAnswer(chat.call(requirement).getContent());
 
         log.info("大模型回答 {}", translated);
 

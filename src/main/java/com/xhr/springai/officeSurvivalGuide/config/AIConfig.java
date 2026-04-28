@@ -16,27 +16,18 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.List;
 
 @Configuration
-@EnableScheduling
 @RequiredArgsConstructor
 public class AIConfig {
 
     private static final Logger log = LoggerFactory.getLogger(AIConfig.class);
 
-    @Value("${custom.coder-name}")
-    private String coderName;
-
     @Value("${custom.embedding-name}")
     private String embeddingName;
-
-    @Value("${custom.qwen-name}")
-    private String qwenName;
 
     @Value("${custom.vl-name}")
     private String vlName;
@@ -44,55 +35,10 @@ public class AIConfig {
     @Value("${spring.ai.anthropic.chat.options.model}")
     private String claudeName;
 
-    @Value("${custom.coder-tokens}")
-    private long coderToken;
-
-    @Value("${custom.embedding-tokens}")
-    private long embeddingToken;
-
-    @Value("${custom.qwen-tokens}")
-    private long qwenToken;
-
-    @Value("${custom.vl-tokens}")
-    private long vlToken;
-
     @Value("${custom.maxMessage}")
     private int maxMessage;
 
     private final JdbcTemplate jdbcTemplate;
-
-    @Bean("qwenClient")
-    @Primary
-    public ChatClient chatClientBuilder(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {
-        log.info("加载通用生成器专家模型 {}", qwenName);
-        OpenAiChatOptions options = OpenAiChatOptions.builder().model(qwenName).build();
-        if (!qwenName.toLowerCase().contains("gpt")){
-            //GPT不支持stop
-            options =  OpenAiChatOptions.builder().model(qwenName).stop(List.of("```", "```json")).build();
-        }
-
-        return ChatClient.builder(chatModel).clone()
-                .defaultSystem("你是一位通用知识专家，协助用户完成工作。")
-                .defaultAdvisors(tokenAdvisor)
-//                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory()).build())
-                .defaultOptions(options).build();
-    }
-
-    @Bean("coderClient")
-    public ChatClient coderClient(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {
-        log.info("加载代码生成模型 {}", coderName);
-        OpenAiChatOptions options = OpenAiChatOptions.builder().model(coderName).build();
-        if (!coderName.toLowerCase().contains("gpt")){
-            //GPT不支持stop
-            options =  OpenAiChatOptions.builder().model(coderName).stop(List.of("```", "```json")).build();
-        }
-
-        return ChatClient.builder(chatModel).clone()
-                .defaultSystem("你是一位技术专家，不要输出Markdown格式，不要解释。")
-                .defaultAdvisors(tokenAdvisor)
-//                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory()).build())
-                .defaultOptions(options).build();
-    }
 
     @Bean("rerankClient")
     public ChatClient reRankChatClient(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {

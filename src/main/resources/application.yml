@@ -99,15 +99,40 @@ spring:
             platform: mysql
 
 custom:
-  coder-name:  Pro/deepseek-ai/DeepSeek-V3.2 #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash
-  coder-tokens: 2000000
-  qwen-name: Qwen/Qwen3-8B
-  qwen-tokens: 50000
+  code:
+    url: https://api.siliconflow.cn/
+    apiKey: ${SILICONFLOW_API_KEY}
+    name:  Pro/deepseek-ai/DeepSeek-V3.2 #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash
+    tokens: 2000000
+    stop:
+      - "```"
+      - "```json"
+    param:
+      temperature: 0.1
+      top_p: 0.7
+      frequency_penalty: 0.2
+      presence_penalty: 0.1
+      max_tokens: 350000
+      max-completion-tokens: 2000000
+  chat:
+    url: https://api.siliconflow.cn/
+    apiKey: ${SILICONFLOW_API_KEY}
+    name:  Qwen/Qwen3-8B
+    tokens: 50000
+    stop:
+      - "```"
+      - "```json"
+    param:
+      temperature: 0.1
+      top_p: 0.7
+      frequency_penalty: 0.2
+      presence_penalty: 0.1
+      max_tokens: 350000
+      max-completion-tokens: 2000000
+
   embedding-name: Qwen/Qwen3-Embedding-8B
-  embedding-tokens: 1000000
   rerank-name: Qwen/Qwen3-Reranker-8B
   vl-name: PaddlePaddle/PaddleOCR-VL
-  vl-tokens: 80000
   maxMessage: 1
   maxToken: 500
   chunkSize: 200

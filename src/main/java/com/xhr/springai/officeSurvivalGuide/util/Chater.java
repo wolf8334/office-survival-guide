@@ -6,22 +6,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.metadata.ChatGenerationMetadata;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
-@Service
 public class Chater implements ICaller {
 
     private static final Logger log = LoggerFactory.getLogger(Chater.class);
 
-    private final ChatClient chatClient;
+    private ChatClient chatClient;
     private final String conversationId = "chater";
     private final String fluxConversationId = "chater_flux";
-
-    public Chater(@Qualifier("qwenClient") ChatClient client) {
-        this.chatClient = client;
-    }
 
     public String call(String expansionPrompt, String requirement) {
         return chatClient.prompt().system(expansionPrompt).user(requirement)

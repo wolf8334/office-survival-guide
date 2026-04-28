@@ -4,10 +4,9 @@ import com.xhr.springai.officeSurvivalGuide.config.enums.ANSWER_STYLE;
 import com.xhr.springai.officeSurvivalGuide.config.enums.INTENT;
 import com.xhr.springai.officeSurvivalGuide.config.enums.TARGET_TYPE;
 import com.xhr.springai.officeSurvivalGuide.config.enums.TIME_SCOPE;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter @Setter
+@Data
 public class IntentClassification {
 
     //主意图

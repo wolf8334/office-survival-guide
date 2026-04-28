@@ -4,8 +4,9 @@ import com.xhr.springai.officeSurvivalGuide.bean.FileItem;
 import com.xhr.springai.officeSurvivalGuide.bean.GenerateCode;
 import com.xhr.springai.officeSurvivalGuide.bean.GenerateResult;
 import com.xhr.springai.officeSurvivalGuide.bean.SqlIr;
+import com.xhr.springai.officeSurvivalGuide.client.ChaterClient;
+import com.xhr.springai.officeSurvivalGuide.client.CoderClient;
 import com.xhr.springai.officeSurvivalGuide.util.CodeSplitter;
-import com.xhr.springai.officeSurvivalGuide.util.CoderUtil;
 import com.xhr.springai.officeSurvivalGuide.util.JSONUtil;
 import com.xhr.springai.officeSurvivalGuide.util.SqlParamExtractor;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +34,12 @@ import java.util.zip.ZipOutputStream;
 @RequiredArgsConstructor
 public class CodeService {
 
-    private final CoderUtil coder;
     private final CodeSplitter codeWriter;
     private final JSONUtil json;
     private final SqlParamExtractor sqlParamExtractor;
     private final TempStorage tempStorage;
+    private final ChaterClient chat;
+    private final CoderClient code;
 
     public String writeCode(Map<String, String> param) {
         try {
@@ -117,7 +119,7 @@ public class CodeService {
                     
                     按照以上模板格式，直接输出完整代码，第一行就是------加文件名。
                     """.formatted(sql, sqlToIR, uriPath, busiName, busiChnName, basePackage, controllerTemplate, ServiceInterfaceTemplate, ServiceTemplate, daoTemplate, mapperTemplate, webapiTemplate, webrouteTemplate, webpageTemplate);
-            String files = coder.callForString(systemPromot, userPrompt);
+            String files = code.call(systemPromot, userPrompt).getContent();
 
             String javaBase = "C:\\Users\\Administrator\\IdeaProjects\\smarcatering-srv\\src\\main\\java\\com\\suypower\\inteCater\\foodBeverages";
             String resourceBase = "C:\\Users\\Administrator\\IdeaProjects\\smarcatering-srv\\src\\main\\resources\\mapper\\inteCater\\foodBeverages";
@@ -132,7 +134,7 @@ public class CodeService {
 
     public String analyze(@RequestBody Map<String, String> param) {
         log.info("分析用户意图 {}", param);
-        String prompt = param.getOrDefault("prompt", "").toString();
+        String prompt = param.getOrDefault("prompt", "");
 
         if (prompt.isEmpty()) {
             return "未输入有效信息，请填写";
@@ -156,7 +158,7 @@ public class CodeService {
                 只返回 JSON，不要任何其他内容。
                 """.formatted(prompt);
 
-        return coder.callForString(systemMessage, userMessage);
+        return chat.call(systemMessage,userMessage).getContent();
     }
 
     public GenerateResult writeFullCode(@RequestBody GenerateCode genCode) {
@@ -200,7 +202,7 @@ public class CodeService {
                     %s
                     """.formatted(prompt, json.parseObject(list));
 
-            String ret = coder.callForString(systemMessage, userMessage);
+            String ret = code.call(systemMessage, userMessage).getContent();
 
             Map<String, String> files = codeWriter.split(ret);
 
