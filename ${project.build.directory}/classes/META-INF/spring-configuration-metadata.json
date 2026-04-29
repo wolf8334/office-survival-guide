@@ -1,0 +1,15 @@
+{
+  "groups": [
+    {
+      "name": "spring.datasource.mysql",
+      "type": "javax.sql.DataSource",
+      "sourceType": "com.xhr.springai.officeSurvivalGuide.config.MySQLDataSourceConfig",
+      "sourceMethod": "MySQLDataSource()"
+    }
+  ],
+  "properties": [],
+  "hints": [],
+  "ignored": {
+    "properties": []
+  }
+}
