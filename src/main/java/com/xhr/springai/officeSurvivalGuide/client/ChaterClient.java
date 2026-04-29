@@ -42,6 +42,8 @@ public class ChaterClient {
                 .extraParams(properties.getParam())
                 .build();
 
+        log.info("chat model {}",properties.getName());
+
         return client.chat(request);
     }
 
@@ -51,10 +53,13 @@ public class ChaterClient {
                 .baseUrl(properties.getUrl())
                 .apiKey(properties.getApiKey())
                 .model(properties.getName())
+                .system(systemMessage)
                 .user(userMessage)
                 .stop(properties.getStop())
                 .extraParams(properties.getParam())
                 .build();
+
+        log.info("chat callFlux model {}",properties.getName());
 
         return client.chatStream(request);
     }
@@ -69,6 +74,8 @@ public class ChaterClient {
                 .stop(properties.getStop())
                 .extraParams(properties.getParam())
                 .build();
+
+        log.info("chat callFlux model {}",properties.getName());
 
         return client.chatStream(request);
     }

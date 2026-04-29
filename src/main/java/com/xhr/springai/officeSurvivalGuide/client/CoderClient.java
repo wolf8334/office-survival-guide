@@ -42,6 +42,8 @@ public class CoderClient {
                 .extraParams(properties.getParam())
                 .build();
 
+        log.info("code model {}", properties.getName());
+
         return client.chat(request);
     }
 
@@ -51,10 +53,13 @@ public class CoderClient {
                 .baseUrl(properties.getUrl())
                 .apiKey(properties.getApiKey())
                 .model(properties.getName())
+                .system(systemMessage)
                 .user(userMessage)
                 .stop(properties.getStop())
                 .extraParams(properties.getParam())
                 .build();
+
+        log.info("code callFlux model {}", properties.getName());
 
         return client.chatStream(request);
     }
@@ -69,6 +74,8 @@ public class CoderClient {
                 .stop(properties.getStop())
                 .extraParams(properties.getParam())
                 .build();
+
+        log.info("code callFlux model {}", properties.getName());
 
         return client.chatStream(request);
     }

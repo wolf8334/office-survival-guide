@@ -55,7 +55,7 @@ public class RerankService {
             return Collections.emptyList();
         }
 
-        RestClient restClient = RestClient.builder().baseUrl(baseUrl + "v1/rerank").build();
+        RestClient restClient = RestClient.builder().baseUrl(baseUrl + "/v1/rerank").build();
 
         List<String> docContents = documents.stream().map(Document::getText).toList();
 

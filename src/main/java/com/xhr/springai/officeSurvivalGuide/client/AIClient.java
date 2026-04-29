@@ -4,10 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,6 +35,13 @@ public class AIClient {
                 .header("Content-Type", "application/json")
                 .bodyValue(body)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, response ->
+                        response.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    log.error("错误响应体: {}", errorBody);
+                                    return Mono.error(new RuntimeException(errorBody));
+                                })
+                )
                 .bodyToMono(String.class)
                 .block();
 
@@ -47,16 +58,23 @@ public class AIClient {
                 .header("Content-Type", "application/json")
                 .bodyValue(body)
                 .retrieve()
-                .bodyToFlux(String.class)
-                .filter(line -> line.startsWith("data: ") && !line.equals("data: [DONE]"))
-                .map(line -> line.substring(6))  // 去掉 "data: " 前缀
-                .mapNotNull(json -> {
+                .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
+                .filter(sse -> sse.data() != null && !sse.data().equals("[DONE]"))
+                .mapNotNull(sse -> {
                     try {
-                        JsonNode node = objectMapper.readTree(json);
-                        JsonNode content = node.path("choices").path(0)
-                                .path("delta").path("content");
-                        return content.isNull() || content.isMissingNode()
-                                ? null : content.asText();
+                        JsonNode node = objectMapper.readTree(sse.data());
+                        JsonNode delta = node.path("choices").path(0).path("delta");
+
+                        String reasoning = delta.path("reasoning_content").asText("");
+                        String content = delta.path("content").asText("");
+
+                        if (!reasoning.isEmpty()) {
+                            return "\u0001" + reasoning.replaceAll("\\n{2,}", "\n\n");  // 用不可见字符标记是 reasoning
+                        }
+                        if (!content.isEmpty()) {
+                            return content.replaceAll("\\n{3,}", "\n\n");
+                        }
+                        return null;
                     } catch (Exception e) {
                         return null;
                     }
@@ -113,16 +131,16 @@ public class AIClient {
 
 
             if (content.contains("</think>")) {
-                log.info("原始响应 {}",content);
+                log.info("原始响应 {}", content);
                 content = content.replaceAll("(?s).*?</think>", "").trim();
             }
 
-            log.info("大模型响应 {}",content);
+            log.info("大模型响应 {}", content);
 
             if (!"stop".equalsIgnoreCase(finishReason)) {
                 log.info("finish_reason: {} ", finishReason);
             }
-            log.info("promptTokens {} completionTokens {} totalTokens {}" ,promptTokens,completionTokens,promptTokens + completionTokens);
+            log.info("promptTokens {} completionTokens {} totalTokens {}", promptTokens, completionTokens, promptTokens + completionTokens);
 
             return AIResponse.builder()
                     .content(content)

@@ -50,6 +50,7 @@ spring:
     # DeepSeek https://api.deepseek.com DEEPSEEK_API_KEY
     # OFoxAI https://api.ofox.ai/ OFOX_API_KEY
     # KIMI https://api.moonshot.cn/ KIMI_API_KEY
+    # 百炼 https://dashscope.aliyuncs.com/compatible-mode/v1 BAILIAN_API_KEY
     anthropic:
       api-key: ${ANTHROPIC_API_KEY}
       chat:
@@ -59,7 +60,7 @@ spring:
           top_p: 0.7
           max_tokens: 350000
     openai:
-      base-url: https://api.siliconflow.cn
+      base-url: https://api.siliconflow.cn/
       api-key: ${SILICONFLOW_API_KEY}
       chat:
         options:
@@ -100,9 +101,9 @@ spring:
 
 custom:
   code:
-    url: https://api.siliconflow.cn/
-    apiKey: ${SILICONFLOW_API_KEY}
-    name:  Pro/deepseek-ai/DeepSeek-V3.2 #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash
+    url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    apiKey: ${BAILIAN_API_KEY}
+    name:  qwen3.5-397b-a17b #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash qwen3-coder-plus
     tokens: 2000000
     stop:
       - "```"
@@ -112,12 +113,12 @@ custom:
       top_p: 0.7
       frequency_penalty: 0.2
       presence_penalty: 0.1
-      max_tokens: 350000
+      max_tokens: 60000
       max-completion-tokens: 2000000
   chat:
-    url: https://api.siliconflow.cn/
-    apiKey: ${SILICONFLOW_API_KEY}
-    name:  Qwen/Qwen3-8B
+    url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    apiKey: ${BAILIAN_API_KEY}
+    name:  qwen3.6-max-preview
     tokens: 50000
     stop:
       - "```"
@@ -127,7 +128,7 @@ custom:
       top_p: 0.7
       frequency_penalty: 0.2
       presence_penalty: 0.1
-      max_tokens: 350000
+      max_tokens: 60000
       max-completion-tokens: 2000000
 
   embedding-name: Qwen/Qwen3-Embedding-8B

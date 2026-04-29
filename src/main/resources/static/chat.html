@@ -474,8 +474,7 @@
             <div class="panel-body">
                 <div class="field">
                     <label for="userRequirement">用户需求（参数名：userRequirement）</label>
-                    <textarea id="userRequirement" placeholder="请输入需求内容，例如：
-如果我要根据申请编号查询受电设备信息，应该使用哪个接口"></textarea>
+                    <textarea id="userRequirement" placeholder="请输入需求内容，例如：如果我要根据申请编号查询受电设备信息，应该使用哪个接口"></textarea>
                 </div>
 
                 <div class="actions">
@@ -504,6 +503,13 @@
                 <button id="modeRenderBtn" class="btn-secondary btn-mode active">渲染视图</button>
                 <button id="modeRawBtn" class="btn-secondary btn-mode">原文视图</button>
                 <button id="modeSplitBtn" class="btn-secondary btn-mode">对照视图</button>
+            </div>
+
+            <div id="reasoningPanel" style="display:none; margin: 0 18px 12px; border: 1px solid var(--line); background: rgba(74,163,255,0.04);">
+                <div style="padding: 10px 14px; font-size: 12px; color: var(--text-dim); border-bottom: 1px solid var(--line); font-weight: 600;">
+                    💭 推理过程
+                </div>
+                <div id="reasoningOutput" style="padding: 12px 14px; font-size: 13px; color: var(--text-dim); line-height: 1.7; white-space: pre-wrap; max-height: 200px; overflow-y: auto;"></div>
             </div>
 
             <div class="output-toolbar">
@@ -572,10 +578,27 @@
     let rawBuffer = '';
     let markdownBuffer = '';
 
+    let reasoningBuffer = '';
+    const reasoningPanel = document.getElementById('reasoningPanel');
+    const reasoningOutput = document.getElementById('reasoningOutput');
+
     marked.setOptions({
         breaks: true,
         gfm: true
     });
+
+    function updateReasoningView() {
+        if (reasoningBuffer) {
+            const normalized = normalizeMarkdown(reasoningBuffer);
+            const rawHtml = marked.parse(normalized);
+            const safeHtml = DOMPurify.sanitize(rawHtml);
+            const html = `<div class="streaming">${safeHtml}</div>`;
+
+            reasoningPanel.style.display = 'block';
+            reasoningOutput.innerHTML = html;
+            reasoningOutput.scrollTop = reasoningOutput.scrollHeight;
+        }
+    }
 
     function log(message) {
         const time = new Date().toLocaleTimeString();
@@ -623,7 +646,7 @@
         t = t.replace(/(^|\n)(#{1,6})([^\s#])/g, '$1$2 $3');
 
         // 2) 标题尽量从新行开始
-        t = t.replace(/([^\n])((?:#{1,6})\s)/g, '$1\n$2');
+        t = t.replace(/([^\n])(#{1,6}\s)/g, '$1\n$2');
 
         // // 3) 分隔线后接标题/表格时补换行
         // t = t.replace(/(---+)(#{1,6}\s)/g, '$1\n$2');
@@ -671,14 +694,27 @@
         markdownBuffer = '';
         refreshViews(false);
         progressText.textContent = '已清空';
+
+        reasoningBuffer = '';
+        reasoningPanel.style.display = 'none';
+        reasoningOutput.textContent = '';
         log('输出区已清空。');
     }
 
     function appendChunk(text) {
         if (!text) return;
-        rawBuffer += text;
-        markdownBuffer += text;
-        refreshViews(true);
+
+        if (text.startsWith('\x01')) {
+            // reasoning_content，加到推理区
+            const reasoning = text.slice(1);
+            reasoningBuffer += reasoning;
+            updateReasoningView();
+        } else {
+            // 正常内容
+            rawBuffer += text;
+            markdownBuffer += text;
+            refreshViews(true);
+        }
     }
 
     function extractSSEEvents(chunkText) {
