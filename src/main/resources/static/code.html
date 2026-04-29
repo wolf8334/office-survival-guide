@@ -377,6 +377,7 @@
             pendingToken = data.token;
             showResult(data.files, data.downloadUrl);
         } catch (e) {
+            console.log("代码生成失败:",e)
             removeThinking();
             addMsg('ai', '<div class="bubble ai">生成失败，请稍后重试。</div>');
             document.getElementById('sendBtn').disabled = false;
