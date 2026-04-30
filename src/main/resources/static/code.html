@@ -13,6 +13,16 @@
         .model-select { font-size: 12px; padding: 4px 10px; border: 1px solid #ddd; border-radius: 20px; background: #f5f4f0; color: #555; cursor: pointer; outline: none; }
         .model-select:focus { border-color: #aaa; }
 
+        .topbar-back {
+            font-size: 12px;
+            color: #888;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .topbar-back:hover { color: #333; }
+
         .main { display: grid; grid-template-columns: 340px 1fr; flex: 1; overflow: hidden; }
 
         .left { background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden; }
@@ -153,6 +163,7 @@
 <body>
 
 <div class="topbar">
+    <a class="topbar-back" href="/">← 返回首页</a>
     <label for="modelSelect" class="topbar-title">代码生成工具</label>
     <select style="display:none" class="model-select" id="modelSelect">
         <option value="Pro/deepseek-ai/DeepSeek-V3.2">DeepSeek-V3.2</option>

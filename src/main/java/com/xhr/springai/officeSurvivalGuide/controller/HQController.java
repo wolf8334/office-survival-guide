@@ -1,6 +1,7 @@
 package com.xhr.springai.officeSurvivalGuide.controller;
 
 import com.xhr.springai.officeSurvivalGuide.service.HQService;
+import com.xhr.springai.officeSurvivalGuide.service.QdrantMetaService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController()
@@ -21,6 +23,7 @@ public class HQController {
     private static final Logger log = LoggerFactory.getLogger(HQController.class);
 
     private final HQService service;
+    private final QdrantMetaService qdrantMetaService;
 
     @Operation(method = "POST", description = "根据后勤业务知识，回答用户问题")
     @PostMapping(value = "/acknowledge", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -39,5 +42,10 @@ public class HQController {
     @PostMapping("/vectorize")
     public String vectorize(@RequestParam("file") MultipartFile file) {
         return service.vectorize(file);
+    }
+
+    @GetMapping("/filenames")
+    public List<String> listFilenames() {
+        return qdrantMetaService.getDistinctFilenames();
     }
 }
