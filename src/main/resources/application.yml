@@ -88,7 +88,7 @@ spring:
         api-key: ${QDRANT_API_KEY}
         collection-name: ${QDRANT_COLLECTION_NAME}
         use-tls: true
-        initialize-schema: false
+        initialize-schema: true
 #      pgvector:
 #        dimensions: 4096
 #        distance-type: COSINE_DISTANCE
