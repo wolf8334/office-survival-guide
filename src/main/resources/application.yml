@@ -120,7 +120,7 @@ custom:
   chat:
     url: https://dashscope.aliyuncs.com/compatible-mode/v1
     apiKey: ${BAILIAN_API_KEY}
-    name:  deepseek-v4-pro
+    name:  kimi-k2.6
     tokens: 50000
     stop:
       - "```"
