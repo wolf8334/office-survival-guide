@@ -163,7 +163,7 @@ public class CodeService {
 
     public GenerateResult writeFullCode(@RequestBody GenerateCode genCode) {
         try {
-            log.info("编写代码 {}", json.parseObject(genCode));
+            log.info("编写代码，用户需求 {} ，技术需求 {}", genCode.getPrompt(),genCode.getTechRequirements());
             //用户首次给大模型输入的信息
             String prompt = genCode.getPrompt();
 

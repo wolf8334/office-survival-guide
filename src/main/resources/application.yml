@@ -120,7 +120,7 @@ custom:
   chat:
     url: https://dashscope.aliyuncs.com/compatible-mode/v1
     apiKey: ${BAILIAN_API_KEY}
-    name:  kimi-k2.6
+    name:  qwen3.5-plus-2026-04-20
     tokens: 50000
     stop:
       - "```"
