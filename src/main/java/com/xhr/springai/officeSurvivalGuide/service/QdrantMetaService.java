@@ -23,8 +23,11 @@ public class QdrantMetaService {
     @Value("${spring.ai.vectorstore.qdrant.collection-name}")
     private String collection;
 
-    @Value("${spring.ai.vectorstore.qdrant.api-key:}")
+    @Value("${spring.ai.vectorstore.qdrant.api-key}")
     private String apiKey;
+
+    @Value("${spring.ai.vectorstore.qdrant.use-tls}")
+    private String usetls;
 
     @Value("${qdrant.rest-port:6333}")
     private int qdrantRestPort;
@@ -36,7 +39,12 @@ public class QdrantMetaService {
         String nextOffset = null;
 
         do {
-            String url = "https://" + qdrantHost + ":" + qdrantRestPort + "/collections/" + collection + "/points/scroll";
+            String http = "http://";
+            if ("true".equalsIgnoreCase(usetls)){
+                http = "https://";
+            }
+
+            String url = http + qdrantHost + ":" + qdrantRestPort + "/collections/" + collection + "/points/scroll";
 
             Map<String, Object> body = new HashMap<>();
             body.put("limit", 10000);

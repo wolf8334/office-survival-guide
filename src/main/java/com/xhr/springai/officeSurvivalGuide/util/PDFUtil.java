@@ -20,11 +20,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.StructuredTaskScope;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 import java.util.regex.Pattern;
-import java.util.stream.Gatherers;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -141,30 +140,32 @@ public class PDFUtil {
     private List<String> extractPageAsImage(String pdfPath) throws IOException {
         int totalPage = getPDFPages(pdfPath);
 
-        return IntStream.range(0, totalPage)
-                .boxed()
-                .gather(Gatherers.windowFixed(3))
-                .flatMap(batch -> {
-                    try (var scope = StructuredTaskScope.open(StructuredTaskScope.Joiner.<String>awaitAllSuccessfulOrThrow())) {
-                        // 结构化并发：并行处理当前批次的页面
-                        var subtasks = batch.stream().map(pageIndex -> scope.fork(() -> {
-                            try (PDDocument docu = Loader.loadPDF(new File(pdfPath))) {
-                                var renderer = new PDFRenderer(docu);
-                                BufferedImage image = renderer.renderImageWithDPI(pageIndex, 300);
-                                String result = vl.call("请识别此图片，返回图片上的内容", imageToBase64(image));
-                                image.flush(); // 显式释放内存
-                                log.info("pageIndex {} 共 {}",pageIndex,totalPage);
-                                return result;
-                            }
-                        })).toList();
+        Semaphore semaphore = new Semaphore(3);
 
-                        scope.join();
-                        return subtasks.stream().map(StructuredTaskScope.Subtask::get);
-                    } catch (Exception e) {
-                        e.printStackTrace();
+        List<CompletableFuture<String>> futures = IntStream.range(0, totalPage)
+                .<CompletableFuture<String>>mapToObj(pageIndex -> CompletableFuture.supplyAsync(() -> {
+                    try {
+                        semaphore.acquire();
+                        try (PDDocument docu = Loader.loadPDF(new File(pdfPath))) {
+                            var renderer = new PDFRenderer(docu);
+                            BufferedImage image = renderer.renderImageWithDPI(pageIndex, 300);
+                            String result = vl.call("请识别此图片，返回图片上的内容", imageToBase64(image));
+                            image.flush(); // 显式释放内存
+                            log.info("pageIndex {} 共 {}",pageIndex,totalPage);
+                            return result;
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }catch (IOException _) {
+                        return null;
+                    } finally {
+                        semaphore.release();
                     }
-                    return Stream.empty();
-                }).toList();
+                }))
+                .toList();
+
+        return futures.stream().map(CompletableFuture::join).filter(Objects::nonNull).toList();
     }
 
     private int getPDFPages(String pdfPath) {
