@@ -135,7 +135,7 @@ public class AIClient {
                 content = content.replaceAll("(?s).*?</think>", "").trim();
             }
 
-            log.info("大模型响应 {}", content);
+            log.debug("大模型响应 {}", content);
 
             if (!"stop".equalsIgnoreCase(finishReason)) {
                 log.info("finish_reason: {} ", finishReason);

@@ -4,435 +4,193 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>知识库新增</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f4f0;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .topbar {
-            height: 48px;
-            background: #fff;
-            border-bottom: 1px solid #e8e6e0;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            gap: 12px;
-            flex-shrink: 0;
-        }
-        .topbar-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
-        .topbar-back {
-            font-size: 12px;
-            color: #888;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .topbar-back:hover { color: #333; }
-
-        .main {
-            display: grid;
-            grid-template-columns: 340px 1fr;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .left {
-            background: #fff;
-            border-right: 1px solid #e8e6e0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .left-header {
-            padding: 16px 18px 12px;
-            border-bottom: 1px solid #f0eee8;
-        }
-        .left-header h2 { font-size: 13px; font-weight: 500; color: #1a1a1a; }
-        .left-header p { font-size: 11px; color: #888; margin-top: 2px; }
-
-        .left-body {
-            flex: 1;
-            padding: 16px 18px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .field-label {
-            font-size: 11px;
-            font-weight: 500;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-        }
-
-        .upload-zone {
-            border: 1.5px dashed #d8d5ce;
-            border-radius: 8px;
-            padding: 28px 18px;
-            text-align: center;
-            cursor: pointer;
-            background: #faf9f7;
-            transition: all 0.15s;
-        }
-        .upload-zone:hover, .upload-zone.dragover {
-            border-color: #aaa;
-            background: #f5f4f0;
-        }
-        .upload-zone .icon { font-size: 26px; margin-bottom: 8px; color: #999; }
-        .upload-zone .text { font-size: 12px; color: #666; }
-        .upload-zone .hint { font-size: 11px; color: #aaa; margin-top: 4px; }
-
-        input[type="file"] { display: none; }
-
-        .file-list { display: flex; flex-direction: column; gap: 5px; }
-        .file-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 7px 10px;
-            background: #faf9f7;
-            border: 1px solid #e8e6e0;
-            border-radius: 7px;
-        }
-        .file-badge {
-            width: 22px; height: 22px;
-            border-radius: 4px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 9px; font-weight: 600;
-            flex-shrink: 0;
-        }
-        .badge-pdf  { background: #fde8d8; color: #c04a00; }
-        .badge-doc  { background: #dde8fd; color: #1a4ab5; }
-        .badge-txt  { background: #f0f0f0; color: #555; }
-        .badge-md   { background: #e8f5e9; color: #2e7d32; }
-        .badge-file { background: #f5f5f5; color: #777; }
-        .file-name {
-            flex: 1; font-size: 12px; color: #333;
-            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-        }
-        .file-size { font-size: 11px; color: #aaa; }
-        .file-remove {
-            font-size: 14px; color: #ccc; cursor: pointer;
-            padding: 0 2px; line-height: 1;
-        }
-        .file-remove:hover { color: #e05555; }
-
-        .upload-btn {
-            width: 100%; padding: 10px;
-            font-size: 13px; font-weight: 500;
-            border-radius: 8px; cursor: pointer;
-            background: #1a1a1a; color: #fff;
-            border: none; transition: background 0.15s;
-        }
-        .upload-btn:hover { background: #333; }
-        .upload-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-        /* 右侧结果区 */
-        .right {
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .right-header {
-            padding: 12px 20px;
-            background: #fff;
-            border-bottom: 1px solid #e8e6e0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        .right-header span { font-size: 13px; font-weight: 500; color: #1a1a1a; }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #2ecc71; }
-
-        .right-body {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: #f5f4f0;
-        }
-
-        .log-item {
-            display: flex;
-            gap: 10px;
-            animation: fadeIn 0.2s ease;
-        }
+        body { margin: 0; background: #f5f4f0; }
+        .log-item { display: flex; gap: 10px; animation: fadeIn 0.2s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
-
-        .log-bubble {
-            padding: 10px 14px;
-            border-radius: 12px;
-            border-bottom-left-radius: 3px;
-            font-size: 13px;
-            line-height: 1.65;
-            background: #fff;
-            color: #1a1a1a;
-            border: 1px solid #e8e6e0;
-            max-width: 88%;
-        }
-
-        .log-avatar {
-            width: 28px; height: 28px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: 600;
-            flex-shrink: 0; margin-top: 2px;
-            background: #1a1a1a; color: #fff;
-        }
-
-        .log-bubble.success {
-            background: #f9fdf9;
-            border-color: #c8e6c9;
-            color: #2e7d32;
-        }
-        .log-bubble.error {
-            background: #fff8f5;
-            border-color: #fde8d8;
-            color: #c04a00;
-        }
-
-        .result-token {
-            display: inline-block;
-            background: #1a1a1a;
-            color: #fff;
-            font-size: 12px;
-            font-family: 'SF Mono', 'Menlo', monospace;
-            padding: 6px 12px;
-            border-radius: 6px;
-            margin-top: 8px;
-            letter-spacing: 0.5px;
-            user-select: all;
-            cursor: text;
-        }
-
-        .thinking {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 14px;
-            background: #fff;
-            border-radius: 12px;
-            font-size: 12px;
-            color: #888;
-            border: 1px solid #e8e6e0;
-        }
+        .log-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 2px; background: #1a1a1a; color: #fff; }
+        .log-bubble { padding: 10px 14px; border-radius: 12px; border-bottom-left-radius: 3px; font-size: 13px; line-height: 1.65; background: #fff; color: #1a1a1a; border: 1px solid #e8e6e0; max-width: 88%; }
+        .log-bubble.success { background: #f9fdf9; border-color: #c8e6c9; color: #2e7d32; }
+        .log-bubble.error { background: #fff8f5; border-color: #fde8d8; color: #c04a00; }
+        .result-token { display: inline-block; background: #1a1a1a; color: #fff; font-size: 12px; font-family: 'SF Mono', 'Menlo', monospace; padding: 6px 12px; border-radius: 6px; margin-top: 8px; letter-spacing: 0.5px; user-select: all; cursor: text; }
+        .file-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #faf9f7; border: 1px solid #e8e6e0; border-radius: 7px; }
+        .file-badge { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; flex-shrink: 0; }
+        .badge-pdf { background: #fde8d8; color: #c04a00; }
+        .badge-doc { background: #dde8fd; color: #1a4ab5; }
+        .badge-txt { background: #f0f0f0; color: #555; }
+        .badge-md { background: #e8f5e9; color: #2e7d32; }
+        .badge-file { background: #f5f5f5; color: #777; }
+        .file-name { flex: 1; font-size: 12px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { font-size: 11px; color: #aaa; }
+        .file-remove { font-size: 14px; color: #ccc; cursor: pointer; padding: 0 2px; line-height: 1; }
+        .file-remove:hover { color: #e05555; }
+        .thinking { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fff; border-radius: 12px; font-size: 12px; color: #888; border: 1px solid #e8e6e0; }
         .dots { display: flex; gap: 3px; }
-        .dots span {
-            display: inline-block;
-            width: 4px; height: 4px;
-            border-radius: 50%; background: #bbb;
-            animation: blink 1.2s infinite;
-        }
+        .dots span { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #bbb; animation: blink 1.2s infinite; }
         .dots span:nth-child(2) { animation-delay: 0.2s; }
         .dots span:nth-child(3) { animation-delay: 0.4s; }
         @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
-
-        .empty-state {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
         .empty-state .icon { font-size: 32px; color: #ccc; }
         .empty-state p { font-size: 13px; color: #aaa; }
-
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
     </style>
 </head>
 <body>
-
-<div class="topbar">
-    <a class="topbar-back" href="/">← 返回首页</a>
-    <span class="topbar-title">知识库新增</span>
-</div>
-
-<div class="main">
-    <div class="left">
-        <div class="left-header">
-            <h2>上传文件</h2>
-            <p>支持 PDF、Word、TXT、Markdown 等格式</p>
-        </div>
-        <div class="left-body">
-            <div>
-                <div class="field-label">选择文件</div>
-                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
-                    <div class="icon">📄</div>
-                    <div class="text">点击或拖拽上传文件</div>
-                    <div class="hint">支持 pdf doc docx txt md</div>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-header style="height: 48px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0;">
+            <el-button text @click="goHome" style="font-size: 12px; color: #888;">← 返回首页</el-button>
+            <span style="font-size: 14px; font-weight: 500; color: #1a1a1a;">知识库新增</span>
+        </el-header>
+        <el-main style="padding: 0; display: grid; grid-template-columns: 340px 1fr; overflow: hidden; flex: 1;">
+            <div style="background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden;">
+                <div style="padding: 16px 18px 12px; border-bottom: 1px solid #f0eee8;">
+                    <h2 style="font-size: 13px; font-weight: 500; color: #1a1a1a; margin: 0;">上传文件</h2>
+                    <p style="font-size: 11px; color: #888; margin: 2px 0 0;">支持 PDF、Word、TXT、Markdown 等格式</p>
                 </div>
-                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.txt,.md">
+                <div style="flex: 1; padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">选择文件</div>
+                        <el-upload ref="uploadRef" v-model:file-list="fileList" :auto-upload="false" :limit="1" :on-change="onFileChange" :on-exceed="onExceed" :on-remove="onRemove" drag action="" accept=".pdf,.doc,.docx,.txt,.md">
+                            <div style="padding: 28px 18px; text-align: center;">
+                                <div style="font-size: 26px; color: #999; margin-bottom: 8px;">📄</div>
+                                <div style="font-size: 12px; color: #666;">点击或拖拽上传文件</div>
+                                <div style="font-size: 11px; color: #aaa; margin-top: 4px;">支持 pdf doc docx txt md</div>
+                            </div>
+                        </el-upload>
+                    </div>
+                    <el-button type="primary" size="large" style="width: 100%;" :disabled="uploading || !files.length" @click="doUpload">
+                        {{ uploading ? '上传中...' : '上传到知识库' }}
+                    </el-button>
+                </div>
             </div>
-
-            <div id="fileListWrap" style="display:none">
-                <div class="field-label">已选文件</div>
-                <div class="file-list" id="fileList"></div>
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
+                <div style="padding: 12px 20px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #2ecc71;"></span>
+                    <span style="font-size: 13px; font-weight: 500; color: #1a1a1a;">上传记录</span>
+                </div>
+                <div class="chat-body" id="chatBody" ref="chatBodyRef" style="flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: #f5f4f0;">
+                    <template v-if="logs.length === 0 && !showThinking">
+                        <div class="empty-state">
+                            <div class="icon">📭</div>
+                            <p>上传文件后，这里会显示处理结果</p>
+                        </div>
+                    </template>
+                    <template v-if="showThinking">
+                        <div class="log-item">
+                            <div class="log-avatar">AI</div>
+                            <div class="thinking">
+                                <div class="dots"><span></span><span></span><span></span></div>正在上传处理中...
+                            </div>
+                        </div>
+                    </template>
+                    <template v-for="log in logs" :key="log.id">
+                        <div class="log-item">
+                            <div class="log-avatar">AI</div>
+                            <div :class="['log-bubble', log.type]">
+                                <div v-html="log.html"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
-
-            <button class="upload-btn" id="uploadBtn" onclick="doUpload()">上传到知识库</button>
-        </div>
-    </div>
-
-    <div class="right">
-        <div class="right-header">
-            <div class="status-dot"></div>
-            <span>上传记录</span>
-        </div>
-        <div class="right-body" id="rightBody">
-            <div class="empty-state" id="emptyState">
-                <div class="icon">📭</div>
-                <p>上传文件后，这里会显示处理结果</p>
-            </div>
-        </div>
-    </div>
+        </el-main>
+    </el-container>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus"></script>
 <script>
-    let files = [];
+    const { createApp, ref, nextTick } = Vue;
+    createApp({
+        setup() {
+            const files = ref([]);
+            const fileList = ref([]);
+            const logs = ref([]);
+            const uploading = ref(false);
+            const showThinking = ref(false);
+            const chatBodyRef = ref(null);
+            let logId = 0;
 
-    const fileInput = document.getElementById('fileInput');
-    const uploadZone = document.getElementById('uploadZone');
+            function goHome() { window.location.href = '/'; }
 
-    fileInput.addEventListener('change', e => {
-        addFiles(Array.from(e.target.files));
-        fileInput.value = '';
-    });
+            function onFileChange(uploadFile) {
+                files.value = [uploadFile.raw];
+            }
 
-    uploadZone.addEventListener('dragover', e => {
-        e.preventDefault();
-        uploadZone.classList.add('dragover');
-    });
-    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-    uploadZone.addEventListener('drop', e => {
-        e.preventDefault();
-        uploadZone.classList.remove('dragover');
-        addFiles(Array.from(e.dataTransfer.files));
-    });
+            function onRemove() {
+                files.value = [];
+                fileList.value = [];
+            }
 
-    function addFiles(newFiles) {
-        if (newFiles.length > 0) {
-            files = [newFiles[0]];  // 直接替换，只保留一个
+            function onExceed() {
+                ElementPlus.ElMessage.warning('当前仅支持单文件上传，请先移除已有文件');
+            }
+
+            function getBadgeClass(name) {
+                const ext = name.split('.').pop().toLowerCase();
+                if (ext === 'pdf') return 'badge-pdf';
+                if (ext === 'doc' || ext === 'docx') return 'badge-doc';
+                if (ext === 'txt') return 'badge-txt';
+                if (ext === 'md') return 'badge-md';
+                return 'badge-file';
+            }
+
+            function formatSize(bytes) {
+                if (bytes < 1024) return bytes + 'B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+                return (bytes / 1024 / 1024).toFixed(1) + 'MB';
+            }
+
+            function escHtml(s) {
+                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            async function doUpload() {
+                if (files.value.length === 0) {
+                    ElementPlus.ElMessage.warning('请先选择要上传的文件');
+                    return;
+                }
+
+                uploading.value = true;
+                showThinking.value = true;
+
+                const formData = new FormData();
+                formData.append('file', files.value[0]);
+
+                try {
+                    const res = await fetch('/hqdmx/vectorize', { method: 'POST', body: formData });
+                    const token = await res.text();
+                    showThinking.value = false;
+                    logs.value.push({
+                        id: ++logId,
+                        type: 'success',
+                        html: `上传成功，共 ${files.value.length} 个文件已入库。<br>
+                            <span style="font-size:11px;color:#888;margin-top:4px;display:block;">服务端返回：</span>
+                            <span class="result-token">${escHtml(token)}</span>`
+                    });
+                    files.value = [];
+                    fileList.value = [];
+                } catch (e) {
+                    showThinking.value = false;
+                    logs.value.push({ id: ++logId, type: 'error', html: '上传失败，请检查网络或文件格式后重试。' });
+                }
+
+                uploading.value = false;
+            }
+
+            return {
+                files, fileList, logs, uploading, showThinking, chatBodyRef,
+                onFileChange, onRemove, onExceed,
+                getBadgeClass, formatSize,
+                doUpload
+            };
         }
-        renderFileList();
-    }
-
-    function removeFile(name) {
-        files = files.filter(f => f.name !== name);
-        renderFileList();
-    }
-
-    function getBadgeClass(name) {
-        const ext = name.split('.').pop().toLowerCase();
-        if (ext === 'pdf') return 'badge-pdf';
-        if (ext === 'doc' || ext === 'docx') return 'badge-doc';
-        if (ext === 'txt') return 'badge-txt';
-        if (ext === 'md') return 'badge-md';
-        return 'badge-file';
-    }
-
-    function formatSize(bytes) {
-        if (bytes < 1024) return bytes + 'B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
-        return (bytes / 1024 / 1024).toFixed(1) + 'MB';
-    }
-
-    function renderFileList() {
-        const wrap = document.getElementById('fileListWrap');
-        const list = document.getElementById('fileList');
-        if (files.length === 0) { wrap.style.display = 'none'; return; }
-        wrap.style.display = 'block';
-        list.innerHTML = files.map(f => {
-            const ext = f.name.split('.').pop().toUpperCase().slice(0, 4);
-            return `<div class="file-item">
-                <div class="file-badge ${getBadgeClass(f.name)}">${ext}</div>
-                <span class="file-name">${f.name}</span>
-                <span class="file-size">${formatSize(f.size)}</span>
-                <span class="file-remove" onclick="removeFile('${f.name}')">×</span>
-            </div>`;
-        }).join('');
-    }
-
-    function addLog(html, type = '') {
-        const empty = document.getElementById('emptyState');
-        if (empty) empty.remove();
-        const body = document.getElementById('rightBody');
-        const div = document.createElement('div');
-        div.className = 'log-item';
-        div.innerHTML = `<div class="log-avatar">AI</div><div class="log-bubble ${type}">${html}</div>`;
-        body.appendChild(div);
-        body.scrollTop = body.scrollHeight;
-        return div;
-    }
-
-    function addThinking() {
-        const empty = document.getElementById('emptyState');
-        if (empty) empty.remove();
-        const body = document.getElementById('rightBody');
-        const div = document.createElement('div');
-        div.className = 'log-item';
-        div.id = 'thinking';
-        div.innerHTML = `<div class="log-avatar">AI</div>
-            <div class="thinking"><div class="dots"><span></span><span></span><span></span></div>正在上传处理中...</div>`;
-        body.appendChild(div);
-        body.scrollTop = body.scrollHeight;
-    }
-
-    function removeThinking() {
-        const t = document.getElementById('thinking');
-        if (t) t.remove();
-    }
-
-    async function doUpload() {
-        if (files.length === 0) {
-            alert('请先选择要上传的文件');
-            return;
-        }
-
-        const btn = document.getElementById('uploadBtn');
-        btn.disabled = true;
-        addThinking();
-
-        const formData = new FormData();
-        formData.append('file', files[0]);
-
-        try {
-            const res = await fetch('/hqdmx/vectorize', {
-                method: 'POST',
-                body: formData
-            });
-            const token = await res.text();
-            removeThinking();
-            addLog(`上传成功，共 ${files.length} 个文件已入库。<br>
-                <span style="font-size:11px;color:#888;margin-top:4px;display:block;">服务端返回：</span>
-                <span class="result-token">${escHtml(token)}</span>`, 'success');
-            files = [];
-            renderFileList();
-        } catch (e) {
-            removeThinking();
-            addLog('上传失败，请检查网络或文件格式后重试。', 'error');
-        }
-
-        btn.disabled = false;
-    }
-
-    function escHtml(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
+    }).use(ElementPlus).mount('#app');
 </script>
 </body>
 </html>
