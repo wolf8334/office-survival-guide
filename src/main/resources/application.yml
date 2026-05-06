@@ -87,7 +87,7 @@ spring:
         port: ${QDRANT_PORT}
         api-key: ${QDRANT_API_KEY}
         collection-name: ${QDRANT_COLLECTION_NAME}
-        use-tls: true
+        use-tls: false
         initialize-schema: true
 #      pgvector:
 #        dimensions: 4096
