@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>需求确认流式页面</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <style>
+        body { margin: 0; background: #f5f4f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; color: #1a1a1a; }
+        .shell { max-width: 1500px; margin: 0 auto; padding: 24px; }
+        .header {
+            display: flex; align-items: center; justify-content: space-between; gap: 16px;
+            padding: 18px 22px; background: #fff; border: 1px solid #e8e6e0;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.04); border-radius: 12px; position: sticky; top: 0; z-index: 10;
+        }
+        .brand { display: flex; align-items: center; gap: 14px; }
+        .brand-badge {
+            width: 44px; height: 44px; border: 1px solid #d0d5dd; background: #f5f4f0;
+            display: grid; place-items: center; font-weight: 700; color: #4aa3ff; letter-spacing: 1px; border-radius: 8px;
+        }
+        .brand h1 { margin: 0; font-size: 18px; font-weight: 600; color: #1a1a1a; }
+        .brand p { margin: 4px 0 0; color: #888; font-size: 12px; }
+        .status-wrap { display: flex; align-items: center; gap: 12px; color: #888; font-size: 13px; white-space: nowrap; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #f0ad4e; flex-shrink: 0; }
+        .dot.connected { background: #2ecc71; }
+        .dot.error { background: #d9534f; }
+        .main { display: grid; grid-template-columns: 420px 1fr; gap: 20px; margin-top: 20px; }
+        .panel { background: #fff; border: 1px solid #e8e6e0; border-radius: 12px; min-height: 720px; display: flex; flex-direction: column; }
+        .panel-head {
+            padding: 16px 18px; border-bottom: 1px solid #e8e6e0;
+            background: linear-gradient(90deg, rgba(74, 163, 255, 0.06), transparent);
+            font-weight: 600; font-size: 13px; border-radius: 12px 12px 0 0;
+        }
+        .panel-body { padding: 18px; flex: 1; }
+        .field { margin-bottom: 16px; }
+        .field label { display: block; margin-bottom: 8px; font-size: 13px; color: #666; }
+        .console {
+            margin-top: 14px; background: #f9f9f8; border: 1px solid #e0ddd8;
+            color: #555; min-height: 100px; max-height: 200px; overflow: auto;
+            padding: 12px; font-family: Consolas, Monaco, monospace;
+            font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; border-radius: 8px;
+        }
+        .right-wrap { min-height: 720px; }
+        .mode-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid #e8e6e0; background: #faf9f7; }
+        .output-toolbar {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 12px 18px; border-bottom: 1px solid #e8e6e0; color: #888; font-size: 13px;
+        }
+        .viewer { flex: 1; min-height: 0; display: flex; }
+        .viewer.mode-render .raw-pane, .viewer.mode-render .split-pane { display: none; }
+        .viewer.mode-render .render-pane { display: block; height: 100%; }
+        .viewer.mode-raw .render-pane, .viewer.mode-raw .split-pane { display: none; }
+        .viewer.mode-raw .raw-pane { display: block; height: 100%; }
+        .viewer.mode-split .render-pane, .viewer.mode-split .raw-pane { display: none; }
+        .viewer.mode-split .split-pane { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
+        .pane { height: 100%; overflow: auto; padding: 22px; line-height: 1.8; }
+        .pane + .pane { border-left: 1px solid #e8e6e0; }
+        .pane-title { font-size: 13px; color: #888; margin-bottom: 12px; }
+        .empty { color: #bbb; padding: 40px 0; text-align: center; border: 1px dashed #e0ddd8; background: #faf9f7; border-radius: 8px; }
+        .streaming::after { content: "▋"; display: inline-block; margin-left: 2px; animation: blink 0.9s infinite; color: #4aa3ff; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+        .markdown { font-size: 14px; line-height: 1.75; }
+        .markdown h1, .markdown h2, .markdown h3, .markdown h4 { margin-top: 1.2em; margin-bottom: 0.6em; color: #1a1a1a; line-height: 1.35; }
+        .markdown h1 { font-size: 26px; border-bottom: 1px solid #e8e6e0; padding-bottom: 10px; }
+        .markdown h2 { font-size: 20px; }
+        .markdown h3 { font-size: 16px; }
+        .markdown p { margin: 0 0 1em; }
+        .markdown ul, .markdown ol { padding-left: 24px; margin: 0 0 1em; }
+        .markdown li { margin: 0.35em 0; }
+        .markdown blockquote { margin: 1em 0; padding: 10px 14px; border-left: 4px solid #4aa3ff; background: #f0f7ff; color: #555; border-radius: 0 8px 8px 0; }
+        .markdown code { background: #f0eee8; padding: 2px 6px; font-family: Consolas, Monaco, monospace; font-size: 0.92em; border-radius: 4px; color: #c04a00; }
+        .markdown pre { background: #f9f9f8; border: 1px solid #e0ddd8; padding: 14px; overflow: auto; margin: 1em 0; border-radius: 8px; }
+        .markdown pre code { background: transparent; border: none; padding: 0; display: block; white-space: pre; color: inherit; }
+        .markdown table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 14px; }
+        .markdown th, .markdown td { border: 1px solid #e0ddd8; padding: 10px 12px; text-align: left; vertical-align: top; }
+        .markdown th { background: #f5f4f0; }
+        .markdown a { color: #4aa3ff; text-decoration: none; }
+        .markdown hr { border: none; border-top: 1px solid #e0ddd8; margin: 20px 0; }
+        .raw-text { white-space: pre-wrap; word-break: break-word; font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.75; color: #333; background: #f9f9f8; border: 1px solid #e0ddd8; padding: 16px; min-height: 180px; border-radius: 8px; }
+        .meta { margin-top: 16px; padding: 14px; background: #faf9f7; border: 1px solid #e8e6e0; border-radius: 8px; font-size: 13px; color: #666; line-height: 1.8; }
+        @media (max-width: 1080px) {
+            .main { grid-template-columns: 1fr; }
+            .panel { min-height: auto; }
+            .viewer.mode-split .split-pane { grid-template-columns: 1fr; }
+            .pane + .pane { border-left: none; border-top: 1px solid #e8e6e0; }
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="shell">
+        <div class="header">
+            <div class="brand">
+                <el-button text @click="goHome" style="font-size: 12px; color: #888;">← 返回首页</el-button>
+                <div class="brand-badge">SSE</div>
+                <div>
+                    <h1>需求确认流式交互终端</h1>
+                    <p>POST请求 · text/event-stream · Markdown / 原始内容 双视图</p>
+                </div>
+            </div>
+            <div class="status-wrap">
+                <span :class="['dot', statusType]"></span>
+                <span>{{ statusText }}</span>
+            </div>
+        </div>
+
+        <div class="main">
+            <section class="panel">
+                <div class="panel-head">请求控制台</div>
+                <div class="panel-body">
+                    <div class="field">
+                        <label>用户需求（参数名：userRequirement）</label>
+                        <el-input v-model="userRequirement" type="textarea" :rows="10" resize="vertical"
+                            placeholder="请输入需求内容，例如：如果我要根据申请编号查询受电设备信息，应该使用哪个接口" />
+                    </div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                        <el-button type="primary" @click="startStream" :disabled="isStreaming">发起请求</el-button>
+                        <el-button @click="stopStream" :disabled="!isStreaming">中止流式</el-button>
+                        <el-button @click="clearOutput" :disabled="isStreaming">清空结果</el-button>
+                    </div>
+
+                    <div class="field" style="margin-top: 24px;">
+                        <label>知识库已有文件</label>
+                        <div style="background: #faf9f7; border: 1px solid #e8e6e0; padding: 12px; max-height: 200px; overflow-y: auto; border-radius: 8px;">
+                            <el-skeleton :loading="fileListLoading" :count="3" animated>
+                                <template #default>
+                                    <ul style="margin:0;padding-left:20px;font-size:13px;color:#666;line-height:1.8;">
+                                        <li v-for="f in indexedFiles" :key="f" :title="f" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ f }}</li>
+                                        <li v-if="indexedFiles.length === 0 && !fileListLoading">暂无已索引文件</li>
+                                        <li v-if="fileListError" style="color:#d9534f">{{ fileListError }}</li>
+                                    </ul>
+                                </template>
+                            </el-skeleton>
+                        </div>
+                    </div>
+
+                    <div class="meta">
+                        <div><strong>请求方式：</strong>POST</div>
+                        <div><strong>内容类型：</strong>application/json</div>
+                        <div><strong>请求体：</strong>{ "userRequirement": "..." }</div>
+                        <div><strong>响应类型：</strong>text/event-stream</div>
+                        <div><strong>说明：</strong>当前页面按纯文本 SSE 解析，并对 Markdown 做结构修复。</div>
+                    </div>
+
+                    <div class="console" v-text="consoleText" ref="consoleRef"></div>
+                </div>
+            </section>
+
+            <section class="panel right-wrap">
+                <div class="panel-head">输出视图</div>
+                <div class="mode-actions">
+                    <el-button :type="viewMode === 'render' ? 'primary' : 'default'" @click="setViewMode('render')" round size="small">渲染视图</el-button>
+                    <el-button :type="viewMode === 'raw' ? 'primary' : 'default'" @click="setViewMode('raw')" round size="small">原文视图</el-button>
+                    <el-button :type="viewMode === 'split' ? 'primary' : 'default'" @click="setViewMode('split')" round size="small">对照视图</el-button>
+                </div>
+
+                <template v-if="reasoningBuffer">
+                    <div style="margin:0 18px 12px;border:1px solid #e8e6e0;background:#f0f7ff;border-radius:8px;">
+                        <div style="padding:10px 14px;font-size:12px;color:#888;border-bottom:1px solid #e8e6e0;font-weight:600;">💭 推理过程</div>
+                        <div style="padding:12px 14px;font-size:13px;color:#555;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;" v-html="reasoningHtml" ref="reasoningRef"></div>
+                    </div>
+                </template>
+
+                <div class="output-toolbar">
+                    <span>{{ viewerTitle }}</span>
+                    <span>{{ progressText }}</span>
+                </div>
+
+                <div :class="['viewer', 'mode-' + viewMode]">
+                    <div class="render-pane pane">
+                        <div class="pane-title">Markdown 渲染区</div>
+                        <div class="markdown" v-html="renderHtml"></div>
+                    </div>
+                    <div class="raw-pane pane">
+                        <div class="pane-title">原始文本区</div>
+                        <div class="raw-text" v-text="rawText"></div>
+                    </div>
+                    <div class="split-pane">
+                        <div class="pane">
+                            <div class="pane-title">Markdown 渲染区</div>
+                            <div class="markdown" v-html="renderHtml"></div>
+                        </div>
+                        <div class="pane">
+                            <div class="pane-title">原始文本区</div>
+                            <div class="raw-text" v-text="rawText"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script>
+    const { createApp, ref, computed, watch, nextTick, onMounted } = Vue;
+    createApp({
+        setup() {
+            const userRequirement = ref('');
+            const isStreaming = ref(false);
+            const statusType = ref('');
+            const statusText = ref('待命');
+            const progressText = ref('未开始');
+            const viewMode = ref('render');
+            const viewerTitle = ref('Markdown 渲染结果');
+            const indexedFiles = ref([]);
+            const fileListLoading = ref(true);
+            const fileListError = ref('');
+
+            const consoleLines = ref(['[SYSTEM] 页面已就绪。']);
+            const consoleText = computed(() => consoleLines.value.join('\n'));
+
+            const rawBuffer = ref('');
+            const markdownBuffer = ref('');
+            const reasoningBuffer = ref('');
+            const isStreamingActive = ref(false);
+
+            const renderHtml = computed(() => {
+                if (!markdownBuffer.value.trim()) return '<div class="empty">尚无输出内容</div>';
+                const normalized = normalizeMarkdown(markdownBuffer.value);
+                const rawHtml = marked.parse(normalized);
+                const safeHtml = DOMPurify.sanitize(rawHtml);
+                const cls = isStreamingActive.value ? 'streaming' : '';
+                return `<div class="${cls}">${safeHtml}</div>`;
+            });
+
+            const rawText = computed(() => rawBuffer.value || '尚无输出内容');
+
+            const reasoningHtml = computed(() => {
+                if (!reasoningBuffer.value) return '';
+                const normalized = normalizeMarkdown(reasoningBuffer.value);
+                const rawHtml = marked.parse(normalized);
+                const safeHtml = DOMPurify.sanitize(rawHtml);
+                return `<div class="streaming">${safeHtml}</div>`;
+            });
+
+            const consoleRef = ref(null);
+            const reasoningRef = ref(null);
+
+            let controller = null;
+
+            marked.setOptions({ breaks: true, gfm: true });
+
+            watch(consoleLines, () => nextTick(() => {
+                if (consoleRef.value) consoleRef.value.scrollTop = consoleRef.value.scrollHeight;
+            }), { deep: true });
+
+            watch(reasoningBuffer, () => nextTick(() => {
+                if (reasoningRef.value) reasoningRef.value.scrollTop = reasoningRef.value.scrollHeight;
+            }));
+
+            function goHome() { window.location.href = '/'; }
+
+            function log(msg) {
+                const time = new Date().toLocaleTimeString();
+                consoleLines.value.push(`[${time}] ${msg}`);
+            }
+
+            function setStatus(type, text) {
+                statusType.value = type;
+                statusText.value = text;
+            }
+
+            function setViewMode(mode) {
+                viewMode.value = mode;
+                if (mode === 'render') viewerTitle.value = 'Markdown 渲染结果';
+                else if (mode === 'raw') viewerTitle.value = '原始文本结果';
+                else viewerTitle.value = 'Markdown / 原文对照';
+            }
+
+            function normalizeMarkdown(text) {
+                if (!text) return '';
+                let t = text.replace(/\r\n/g, '\n');
+                t = t.replace(/(^|\n)(#{1,6})([^\s#])/g, '$1$2 $3');
+                t = t.replace(/([^\n])(#{1,6}\s)/g, '$1\n$2');
+                t = t.replace(/([：:])(\|)/g, '$1\n$2');
+                t = t.replace(/(\S)(\n#{1,6}\s)/g, '$1\n$2');
+                t = t.replace(/\n{3,}/g, '\n\n');
+                return t;
+            }
+
+            function clearOutput() {
+                rawBuffer.value = '';
+                markdownBuffer.value = '';
+                reasoningBuffer.value = '';
+                isStreamingActive.value = false;
+                progressText.value = '已清空';
+                log('输出区已清空。');
+            }
+
+            function appendChunk(text) {
+                if (!text) return;
+                if (text.startsWith('\x01')) {
+                    reasoningBuffer.value += text.slice(1);
+                } else {
+                    rawBuffer.value += text;
+                    markdownBuffer.value += text;
+                    isStreamingActive.value = true;
+                }
+            }
+
+            function extractSSEEvents(chunkText) {
+                const events = [];
+                const blocks = chunkText.split(/\r?\n\r?\n/);
+                for (const block of blocks) {
+                    if (!block.includes('data:') && !block.includes('event:')) continue;
+                    let eventName = 'message';
+                    const dataLines = [];
+                    const lines = block.split(/\r?\n/);
+                    for (const line of lines) {
+                        if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                        else if (line.startsWith('data: ')) dataLines.push(line.slice(6));
+                        else if (line.startsWith('data:')) dataLines.push(line.slice(5));
+                    }
+                    if (dataLines.length > 0) events.push({ event: eventName, data: dataLines.join('\n') });
+                }
+                return events;
+            }
+
+            async function startStream() {
+                const req = userRequirement.value.trim();
+                if (!req) {
+                    setStatus('error', '缺少参数');
+                    progressText.value = '请求未发出';
+                    log('请求终止：userRequirement 不能为空。');
+                    ElementPlus.ElMessage.warning('请输入 userRequirement');
+                    return;
+                }
+                if (isStreaming.value && controller) controller.abort();
+                controller = new AbortController();
+                isStreaming.value = true;
+                rawBuffer.value = '';
+                markdownBuffer.value = '';
+                reasoningBuffer.value = '';
+                isStreamingActive.value = true;
+                setStatus('connected', '连接中');
+                progressText.value = '建立流式连接中';
+                log('开始请求 /hqdmx/acknowledge');
+                try {
+                    const response = await fetch('/hqdmx/acknowledge', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+                        body: JSON.stringify({ userRequirement: req }),
+                        signal: controller.signal
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+                    if (!response.body) throw new Error('浏览器不支持 ReadableStream 或响应体为空');
+                    setStatus('connected', '流式接收中');
+                    progressText.value = '接收数据中';
+                    log('连接成功，开始接收 SSE 数据。');
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let pending = '';
+                    while (true) {
+                        const { value, done } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value, { stream: true });
+                        pending += chunk;
+                        const parts = pending.split(/\r?\n\r?\n/);
+                        pending = parts.pop() || '';
+                        for (const part of parts) {
+                            const events = extractSSEEvents(part + '\n\n');
+                            for (const item of events) {
+                                const text = item.data;
+                                if (text === '[DONE]' || item.event === 'done') {
+                                    log('收到结束标记。');
+                                    progressText.value = '已完成';
+                                    continue;
+                                }
+                                appendChunk(text);
+                            }
+                        }
+                    }
+                    if (pending.trim() || pending.includes('data:')) {
+                        const tailEvents = extractSSEEvents(pending);
+                        for (const item of tailEvents) {
+                            if (item.data && item.data !== '[DONE]') appendChunk(item.data);
+                        }
+                    }
+                    isStreamingActive.value = false;
+                    setStatus('connected', '完成');
+                    progressText.value = '流式结束';
+                    log('流式响应结束。');
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        setStatus('error', '已中止');
+                        progressText.value = '用户中止';
+                        log('请求已由用户中止。');
+                    } else {
+                        setStatus('error', '异常');
+                        progressText.value = '请求失败';
+                        log(`请求异常：${error.message}`);
+                        rawBuffer.value = `请求失败：${error.message}`;
+                        isStreamingActive.value = false;
+                    }
+                } finally {
+                    isStreaming.value = false;
+                    controller = null;
+                }
+            }
+
+            function stopStream() {
+                if (controller) controller.abort();
+            }
+
+            async function fetchIndexedFiles() {
+                try {
+                    const response = await fetch('/hqdmx/filenames');
+                    if (!response.ok) throw new Error(`HTTP 错误! 状态码: ${response.status}`);
+                    const data = await response.json();
+                    indexedFiles.value = Array.isArray(data) ? data : [];
+                } catch (error) {
+                    fileListError.value = `获取失败: ${error.message}`;
+                } finally {
+                    fileListLoading.value = false;
+                }
+            }
+
+            onMounted(() => fetchIndexedFiles());
+
+            return {
+                userRequirement, isStreaming, statusType, statusText, progressText,
+                viewMode, viewerTitle, indexedFiles, fileListLoading, fileListError,
+                consoleText, renderHtml, rawText, reasoningHtml, reasoningBuffer,
+                consoleRef, reasoningRef,
+                goHome, startStream, stopStream, clearOutput, setViewMode
+            };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 工具平台</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <style>
+        body { margin: 0; background: #f5f4f0; }
+        .hero { text-align: center; margin-bottom: 40px; }
+        .hero h1 { font-size: 26px; font-weight: 600; color: #1a1a1a; letter-spacing: -0.3px; margin: 0; }
+        .hero p { font-size: 13px; color: #888; margin-top: 8px; }
+        .card-wrap { cursor: pointer; text-decoration: none; display: block; }
+        .card-wrap:hover .el-card { transform: translateY(-2px); }
+        .card-icon {
+            width: 36px; height: 36px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .icon-green { background: #e8f5e9; }
+        .icon-blue  { background: #e3f2fd; }
+        .icon-amber { background: #fff8e1; }
+        .status-dot {
+            display: inline-block; width: 6px; height: 6px;
+            border-radius: 50%; background: #2ecc71; margin-right: 5px; vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="min-height: 100vh;">
+        <el-header style="height: 48px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; padding: 0 20px;">
+            <span style="font-size: 14px; font-weight: 500; color: #1a1a1a;">AI 工具平台</span>
+        </el-header>
+        <el-main style="display: flex; align-items: center; justify-content: center;">
+            <div style="width: 100%; max-width: 680px;">
+                <div class="hero">
+                    <h1>选择一个工具开始</h1>
+                    <p>基于大语言模型的开发辅助工具集</p>
+                </div>
+                <el-row :gutter="16">
+                    <el-col :xs="24" :sm="8" v-for="item in tools" :key="item.name">
+                        <a :href="item.link" class="card-wrap">
+                            <el-card shadow="hover" :body-style="{ padding: '24px 20px' }">
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div :class="['card-icon', item.iconClass]">{{ item.emoji }}</div>
+                                    <div style="font-size: 14px; font-weight: 500; color: #1a1a1a;">{{ item.name }}</div>
+                                    <div style="font-size: 12px; color: #888; line-height: 1.55;">{{ item.desc }}</div>
+                                    <div style="font-size: 11px; color: #bbb; display: flex; align-items: center; gap: 4px; margin-top: auto;">
+                                        <span class="status-dot"></span>进入
+                                    </div>
+                                </div>
+                            </el-card>
+                        </a>
+                    </el-col>
+                </el-row>
+            </div>
+        </el-main>
+    </el-container>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus"></script>
+<script>
+    const { createApp, ref } = Vue;
+    createApp({
+        setup() {
+            const tools = ref([
+                { name: 'RAG 增强搜索', desc: '基于知识库的语义检索与问答，获取更精准的上下文回答。', emoji: '🔍', iconClass: 'icon-blue', link: 'chat.html' },
+                { name: '代码智能生成', desc: '描述需求并上传参考文件，自动生成完整的业务代码模块。', emoji: '⚡', iconClass: 'icon-green', link: 'code.html' },
+                { name: '知识库新增', desc: '上传文档文件，解析入库后即可在 RAG 搜索中检索使用。', emoji: '📚', iconClass: 'icon-amber', link: 'upload.html' },
+            ]);
+            return { tools };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

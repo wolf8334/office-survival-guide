@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码生成</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <style>
+        body { margin: 0; background: #f5f4f0; }
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #f5f4f0; }
+        .msg { display: flex; gap: 10px; max-width: 88%; }
+        .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+        .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 2px; }
+        .avatar.ai { background: #1a1a1a; color: #fff; }
+        .avatar.user { background: #e0ddd8; color: #555; }
+        .bubble { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.65; max-width: 100%; }
+        .bubble.ai { background: #fff; color: #1a1a1a; border-bottom-left-radius: 3px; border: 1px solid #e8e6e0; }
+        .bubble.user { background: #1a1a1a; color: #fff; border-bottom-right-radius: 3px; }
+        .thinking { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #fff; border-radius: 12px; font-size: 12px; color: #888; border: 1px solid #e8e6e0; }
+        .dots { display: flex; gap: 3px; }
+        .dots span { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #bbb; animation: blink 1.2s infinite; }
+        .dots span:nth-child(2) { animation-delay: 0.2s; }
+        .dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .empty-state .icon { font-size: 32px; color: #ccc; }
+        .empty-state p { font-size: 13px; color: #aaa; }
+        .file-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: #faf9f7; border: 1px solid #e8e6e0; border-radius: 7px; }
+        .file-badge { width: 22px; height: 22px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; flex-shrink: 0; }
+        .badge-java { background: #fde8d8; color: #c04a00; }
+        .badge-vue { background: #d8f5e8; color: #0a7a3e; }
+        .badge-xml { background: #dde8fd; color: #1a4ab5; }
+        .badge-js { background: #fde8d8; color: #c04a00; }
+        .badge-ts { background: #dde8fd; color: #1a4ab5; }
+        .file-name { flex: 1; font-size: 12px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-size { font-size: 11px; color: #aaa; }
+        .file-remove { font-size: 14px; color: #ccc; cursor: pointer; padding: 0 2px; line-height: 1; }
+        .file-remove:hover { color: #e05555; }
+        .confirm-btns { display: flex; gap: 8px; margin-top: 12px; }
+        .result-card { border: 1px solid #c8e6c9; border-radius: 10px; padding: 12px 14px; background: #f9fdf9; margin-top: 10px; }
+        .result-title { font-size: 11px; font-weight: 600; color: #2e7d32; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .result-file { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e8f5e9; }
+        .result-file:last-of-type { border-bottom: none; }
+        .result-file span { font-size: 12px; color: #333; display: flex; align-items: center; gap: 6px; }
+        .result-file span::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #81c784; }
+        .analysis-summary { background: #f5f4f0; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #444; line-height: 1.7; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-container style="height: 100vh;">
+        <el-header style="height: 48px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; padding: 0 20px; gap: 12px; flex-shrink: 0;">
+            <el-button text @click="goHome" style="font-size: 12px; color: #888;">← 返回首页</el-button>
+            <span style="font-size: 14px; font-weight: 500; color: #1a1a1a;">代码生成工具</span>
+            <el-select v-model="model" size="small" style="width: 180px; margin-left: auto;">
+                <el-option label="DeepSeek-V3.2" value="Pro/deepseek-ai/DeepSeek-V3.2"></el-option>
+                <el-option label="DeepSeek-V4" value="deepseek-v4-flash"></el-option>
+                <el-option label="Claude Opus 4.6" value="anthropic/claude-opus-4.6"></el-option>
+            </el-select>
+        </el-header>
+        <el-main style="padding: 0; display: grid; grid-template-columns: 340px 1fr; overflow: hidden; flex: 1;">
+            <div style="background: #fff; border-right: 1px solid #e8e6e0; display: flex; flex-direction: column; overflow: hidden;">
+                <div style="padding: 16px 18px 12px; border-bottom: 1px solid #f0eee8;">
+                    <h2 style="font-size: 13px; font-weight: 500; color: #1a1a1a; margin: 0;">输入</h2>
+                    <p style="font-size: 11px; color: #888; margin: 2px 0 0;">描述需求 + 上传参考文件</p>
+                </div>
+                <div style="flex: 1; padding: 16px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">需求描述</div>
+                        <el-input v-model="promptInput" type="textarea" :rows="5" placeholder="例如：基于某张表，生成某某信息的增删改查，包名 com.example.info，请求路径 /info/list" resize="none"></el-input>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">技术要求（选填）</div>
+                        <el-input v-model="techInput" type="textarea" :rows="3" placeholder="例如：table高度用100%，列宽最小170px，下拉选项从接口获取，主要填写对代码生成的补充要求。" resize="none"></el-input>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; font-weight: 500; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">参考文件</div>
+                        <el-upload ref="uploadRef" :file-list="fileList" :auto-upload="false" :limit="10" :on-change="handleFileChange" :on-remove="handleFileRemove" :on-exceed="handleExceed" drag multiple accept=".java,.vue,.xml,.js,.ts" style="width: 100%;">
+                            <div style="text-align: center; padding: 10px 0;">
+                                <div style="font-size: 22px; color: #999; margin-bottom: 6px;">↑</div>
+                                <div style="font-size: 12px; color: #666;">点击或拖拽上传参考文件</div>
+                                <div style="font-size: 11px; color: #aaa; margin-top: 3px;">支持 .java .vue .xml .js，最多 10 个</div>
+                            </div>
+                        </el-upload>
+                        <div v-if="rawFiles.length" style="display: flex; flex-direction: column; gap: 5px; margin-top: 8px;">
+                            <div v-for="(f, i) in rawFiles" :key="f.name + i" class="file-item">
+                                <div :class="['file-badge', getBadgeCls(f.name)]">{{ getBadgeLabel(f.name) }}</div>
+                                <span class="file-name">{{ f.name }}</span>
+                                <span class="file-size">{{ formatSize(f.size) }}</span>
+                                <span class="file-remove" @click="removeRawFile(i)">×</span>
+                            </div>
+                        </div>
+                    </div>
+                    <el-button type="primary" size="large" style="width: 100%;" :disabled="sending" @click="sendMessage">{{ sending ? '处理中...' : '发送' }}</el-button>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; overflow: hidden;">
+                <div style="padding: 12px 20px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: #2ecc71;"></span>
+                    <span style="font-size: 13px; font-weight: 500; color: #1a1a1a;">对话</span>
+                </div>
+                <div class="chat-body" id="chatBody" ref="chatBodyRef">
+                    <template v-if="messages.length === 0">
+                        <div class="empty-state">
+                            <div class="icon">◎</div>
+                            <p>填写需求并上传参考文件后发送</p>
+                        </div>
+                    </template>
+                    <template v-for="(msg, idx) in messages" :key="msg.id">
+                        <div v-if="msg.role === 'user'" class="msg user">
+                            <div class="avatar user">我</div>
+                            <div class="bubble user" v-html="msg.content"></div>
+                        </div>
+                        <div v-else-if="msg.type === 'thinking'" class="msg ai">
+                            <div class="avatar ai">AI</div>
+                            <div class="thinking">
+                                <div class="dots"><span></span><span></span><span></span></div>分析中...
+                            </div>
+                        </div>
+                        <div v-else-if="msg.type === 'analysis'" class="msg ai">
+                            <div class="avatar ai">AI</div>
+                            <div>
+                                <div class="bubble ai">
+                                    我理解你的需求是：<br><br>
+                                    <div class="analysis-summary">{{ msg.summary }}</div>
+                                    <br>确认后开始生成代码。
+                                </div>
+                                <div class="confirm-btns">
+                                    <el-button size="small" type="primary" round @click="confirmGenerate">对的，开始生成</el-button>
+                                    <el-button size="small" round @click="editRequest">需要修改</el-button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else-if="msg.type === 'result'" class="msg ai">
+                            <div class="avatar ai">AI</div>
+                            <div class="bubble ai">
+                                生成完成，共 {{ msg.files.length }} 个文件：
+                                <div class="result-card">
+                                    <div class="result-title">生成结果</div>
+                                    <div v-for="f in msg.files" :key="f.name" class="result-file">
+                                        <span>{{ f.name }}</span>
+                                        <el-button size="small" round @click="downloadFile(f.name)">下载</el-button>
+                                    </div>
+                                    <el-button style="width:100%;margin-top:10px;" type="primary" @click="downloadAll(msg.downloadUrl)">打包下载全部 zip</el-button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else class="msg ai">
+                            <div class="avatar ai">AI</div>
+                            <div class="bubble ai" v-html="msg.content"></div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </el-main>
+    </el-container>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus"></script>
+<script>
+    const { createApp, ref, nextTick } = Vue;
+    createApp({
+        setup() {
+            const model = ref('Pro/deepseek-ai/DeepSeek-V3.2');
+            const promptInput = ref('');
+            const techInput = ref('');
+            const rawFiles = ref([]);
+            const fileList = ref([]);
+            const messages = ref([]);
+            const sending = ref(false);
+            const waitingConfirm = ref(false);
+            const pendingPrompt = ref('');
+            const pendingAnalysis = ref('');
+            const pendingFiles = ref([]);
+            const pendingToken = ref('');
+            const chatBodyRef = ref(null);
+
+            const extBadge = {
+                java: { cls: 'badge-java', label: 'J' },
+                vue: { cls: 'badge-vue', label: 'V' },
+                xml: { cls: 'badge-xml', label: 'X' },
+                js: { cls: 'badge-js', label: 'JS' },
+                ts: { cls: 'badge-ts', label: 'TS' },
+            };
+
+            function getBadgeCls(name) {
+                const ext = name.split('.').pop().toLowerCase();
+                return (extBadge[ext] || { cls: 'badge-xml' }).cls;
+            }
+            function getBadgeLabel(name) {
+                const ext = name.split('.').pop().toLowerCase();
+                return (extBadge[ext] || { label: ext.toUpperCase().slice(0, 2) }).label;
+            }
+            function formatSize(s) {
+                return s < 1024 ? s + 'B' : (s / 1024).toFixed(1) + 'kb';
+            }
+
+            function handleFileChange(uploadFile) {
+                const f = uploadFile.raw;
+                if (!rawFiles.value.find(x => x.name === f.name)) {
+                    rawFiles.value.push(f);
+                }
+                fileList.value = rawFiles.value.map(f => ({ name: f.name }));
+            }
+            function handleFileRemove(uploadFile) {
+                const name = typeof uploadFile === 'string' ? uploadFile : uploadFile.name;
+                rawFiles.value = rawFiles.value.filter(f => f.name !== name);
+                fileList.value = rawFiles.value.map(f => ({ name: f.name }));
+            }
+            function handleExceed() {
+                ElementPlus.ElMessage.warning('最多上传 10 个文件');
+            }
+            function removeRawFile(i) {
+                const f = rawFiles.value[i];
+                rawFiles.value.splice(i, 1);
+                fileList.value = rawFiles.value.map(f => ({ name: f.name }));
+            }
+
+            let msgIdCounter = 0;
+            function addMsg(role, type, opts = {}) {
+                const msg = { id: ++msgIdCounter, role, type, ...opts };
+                messages.value.push(msg);
+                nextTick(() => {
+                    if (chatBodyRef.value) {
+                        chatBodyRef.value.scrollTop = chatBodyRef.value.scrollHeight;
+                    }
+                });
+                return msg;
+            }
+
+            function escHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            async function readFiles(list) {
+                const result = [];
+                for (const f of list) {
+                    const content = await f.text();
+                    result.push({ name: f.name, content });
+                }
+                return result;
+            }
+
+            async function sendMessage() {
+                const prompt = promptInput.value.trim();
+                if (!prompt) {
+                    ElementPlus.ElMessage.warning('请填写需求描述');
+                    return;
+                }
+                pendingPrompt.value = prompt;
+                const fileInfo = rawFiles.value.length ? `<div style="margin-top:6px;font-size:11px;opacity:0.7">📎 ${rawFiles.value.length} 个文件</div>` : '';
+                addMsg('user', 'text', { content: escHtml(prompt) + fileInfo });
+                sending.value = true;
+                addMsg('ai', 'thinking');
+                pendingFiles.value = await readFiles(rawFiles.value);
+                try {
+                    const res = await fetch('/coder/generate/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, model: model.value })
+                    });
+                    const data = await res.json();
+                    removeThinking();
+                    showAnalysis(data);
+                } catch (e) {
+                    removeThinking();
+                    addMsg('ai', 'text', { content: '分析请求失败，请稍后重试。' });
+                    sending.value = false;
+                }
+            }
+
+            function removeThinking() {
+                const idx = messages.value.findIndex(m => m.type === 'thinking');
+                if (idx !== -1) messages.value.splice(idx, 1);
+            }
+
+            function showAnalysis(data) {
+                if (data.canGenerate) {
+                    pendingAnalysis.value = data.summary;
+                    addMsg('ai', 'analysis', { summary: data.summary });
+                    waitingConfirm.value = true;
+                } else {
+                    addMsg('ai', 'text', {
+                        content: `暂时无法生成，原因如下：<br><br>
+                        <div style="background:#fff8f5;border-radius:8px;padding:10px 12px;font-size:12px;color:#c04a00;line-height:1.7;border:1px solid #fde8d8;">${escHtml(data.reason)}</div>
+                        <br>请补充以上信息后重新发送。`
+                    });
+                    sending.value = false;
+                }
+            }
+
+            async function confirmGenerate() {
+                if (!waitingConfirm.value) return;
+                waitingConfirm.value = false;
+                addMsg('user', 'text', { content: '对的，开始生成' });
+                sending.value = true;
+                addMsg('ai', 'thinking');
+                try {
+                    const res = await fetch('/coder/generate/code', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: pendingPrompt.value,
+                            analysis: pendingAnalysis.value,
+                            files: pendingFiles.value,
+                            techRequirements: techInput.value,
+                            model: model.value
+                        })
+                    });
+                    const data = await res.json();
+                    removeThinking();
+                    pendingToken.value = data.token;
+                    showResult(data.files, data.downloadUrl);
+                } catch (e) {
+                    removeThinking();
+                    addMsg('ai', 'text', { content: '生成失败，请稍后重试。' });
+                    sending.value = false;
+                }
+            }
+
+            function editRequest() {
+                waitingConfirm.value = false;
+                addMsg('ai', 'text', { content: '好的，请补充或修改你的需求描述，我重新理解后再确认。' });
+                sending.value = false;
+                promptInput.value = promptInput.value;
+            }
+
+            function showResult(fileList, downloadUrl) {
+                addMsg('ai', 'result', { files: fileList, downloadUrl, token: pendingToken.value });
+                sending.value = false;
+            }
+
+            function downloadFile(name) {
+                window.location.href = `/coder/generate/downloadFile?token=${pendingToken.value}&name=${encodeURIComponent(name)}`;
+            }
+            function downloadAll(url) {
+                window.location.href = url;
+            }
+
+            function goHome() {
+                window.location.href = '/';
+            }
+
+            return {
+                model, promptInput, techInput, rawFiles, fileList, messages, sending,
+                chatBodyRef, waitingConfirm, pendingToken,
+                handleFileChange, handleFileRemove, handleExceed, removeRawFile,
+                getBadgeCls, getBadgeLabel, formatSize,
+                sendMessage, confirmGenerate, editRequest, downloadFile, downloadAll, goHome
+            };
+        }
+    }).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>
