@@ -20,10 +20,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -49,6 +46,10 @@ public class RerankService {
 
     @Value("${custom.chunkSize}")
     private int chunkSize;
+
+    private final Set<String> MINERU_SUPPORTED = Set.of(
+            "pdf", "docx", "pptx", "xlsx", "jpg", "jpeg", "png", "html"
+    );
 
     public List<Document> rerank(String query, List<Document> documents) {
         if (documents == null || documents.isEmpty()) {
@@ -111,8 +112,8 @@ public class RerankService {
             return new ArrayList<>();
         }
 
-        if ("pdf".equalsIgnoreCase(fileType)){
-            finalChunks = pdf.readPDF(file,fileType);
+        if (MINERU_SUPPORTED.contains(fileType)){
+            finalChunks = pdf.mineruReader(file,fileType);
         } else {
             // 使用Tika读取并解析为 Document 对象列表
             TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
@@ -128,10 +129,10 @@ public class RerankService {
         }
 
         // 3. 文本转换：如果文件很大，需切分为模型可接受的 Token 块
-        List<Document> splitDocs = split(finalChunks);
-        log.info("转换文件完成,共{}组",splitDocs.size());
+//        List<Document> splitDocs = split(finalChunks);
+//        log.info("转换文件完成,共{}组",splitDocs.size());
 
-        return splitDocs;
+        return finalChunks;
     }
 
     public void addDocumentToMySQL(List<Document> documents){

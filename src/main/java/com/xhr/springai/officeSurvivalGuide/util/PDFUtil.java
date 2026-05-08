@@ -1,6 +1,10 @@
 package com.xhr.springai.officeSurvivalGuide.util;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xhr.springai.officeSurvivalGuide.bean.MinerUContentItem;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -32,7 +36,85 @@ public class PDFUtil {
     private static final Logger log = LoggerFactory.getLogger(PDFUtil.class);
 
     private final VLChater vl;
+    private final MineruClient mineru;
+    private final ObjectMapper mapper = new ObjectMapper();
     private final Pattern pattern = Pattern.compile("[\\u4e00-\\u9fa5]");
+
+    public List<Document> mineruReader(MultipartFile file,String fileType) {
+        List<Document> docs = new ArrayList<>();
+        String ret = mineru.call(file);
+        log.info("使用MinerU解析文件返回{}",ret);
+
+        if (StringUtils.isNoneEmpty(ret)){
+            try {
+                JsonNode root = mapper.readTree(ret);
+                JsonNode fileNames = root.get("file_names");
+                log.info("fileNames {}",fileNames);
+
+                for (JsonNode fileName : fileNames) {
+                    log.info("fileName {}",fileName);
+
+                    String name = fileName.asText();
+                    JsonNode contentNodes = root.path("results").path(name).path("content_list");
+                    if (!contentNodes.isMissingNode()){
+                        String content = contentNodes.asText();
+                        List<MinerUContentItem> items = mapper.readValue(content,mapper.getTypeFactory().constructCollectionType(List.class, MinerUContentItem.class));
+
+                        StringBuilder current = new StringBuilder();
+                        int currentPage = 0;
+                        String currentSection = "";
+                        int chunkIndex = 0;
+
+                        for (MinerUContentItem item : items) {
+                            Integer level = item.getText_level();
+                            boolean isHeading = level != null && level >= 1 && level <= 3;
+
+                            if (isHeading && !current.isEmpty()) {
+                                // 保存上一个 chunk
+                                Document doc = new Document(current.toString().trim());
+                                doc.getMetadata().put("filename", file.getResource().getFilename());
+                                doc.getMetadata().put("fileType", fileType);
+                                doc.getMetadata().put("section", currentSection);
+                                doc.getMetadata().put("pageNum", currentPage);
+                                doc.getMetadata().put("chunkIndex", chunkIndex++);
+                                docs.add(doc);
+
+                                log.info("保存文件 {} 第 {} 页，标题为 {}",file.getResource().getFilename(),currentPage,currentSection);
+                                current = new StringBuilder();
+                            }
+
+                            if (isHeading) {
+                                currentSection = item.getText();
+                                currentPage = item.getPage_idx();
+                            }
+
+                            if ("table".equalsIgnoreCase(item.getType()) && item.getTable_body() != null){
+                                current.append(item.getTable_body()).append("\n");
+                            }
+
+                            if ("text".equalsIgnoreCase(item.getType()) && item.getText() != null){
+                                current.append(item.getText()).append("\n");
+                            }
+                        }
+
+                        // 最后一个 chunk
+                        Document doc = new Document(current.toString().trim());
+                        doc.getMetadata().put("filename", file.getResource().getFilename());
+                        doc.getMetadata().put("fileType", fileType);
+                        doc.getMetadata().put("section", currentSection);
+                        doc.getMetadata().put("pageNum", currentPage);
+                        doc.getMetadata().put("chunkIndex", chunkIndex);
+
+                        log.info("保存文件 {} 第 {} 页，标题为 {}",file.getResource().getFilename(),currentPage,currentSection);
+                        docs.add(doc);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return docs;
+    }
 
     public List<Document> readPDF(MultipartFile file, String fileType) {
         List<Document> list = new ArrayList<>();

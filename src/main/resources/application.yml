@@ -133,6 +133,11 @@ custom:
       max_tokens: 60000
       max-completion-tokens: 2000000
 
+  mineru-url: ${MINERU_URL}
+  mineru-backend: pipeline
+  mineru-return_md: true
+  return_content_list: true
+
   embedding-name: Qwen/Qwen3-Embedding-8B
   rerank-name: Qwen/Qwen3-Reranker-8B
   vl-name: deepseek-ai/DeepSeek-OCR
@@ -144,3 +149,5 @@ logging:
   level:
     org.springframework.jdbc.core.JdbcTemplate: INFO
     org.springframework.ai.transformer.splitter: WARN
+    org.apache.pdfbox.rendering:.GlyphCache: OFF
+    org.apache.pdfbox.pdmodel.font.PDCIDFontType0: OFF
