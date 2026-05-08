@@ -47,6 +47,9 @@ public class RerankService {
     @Value("${custom.chunkSize}")
     private int chunkSize;
 
+    @Value("${custom.hasGPU:false}")
+    private String hasGPU;
+
     private final Set<String> MINERU_SUPPORTED = Set.of(
             "pdf", "docx", "pptx", "xlsx", "jpg", "jpeg", "png", "html"
     );
@@ -112,9 +115,11 @@ public class RerankService {
             return new ArrayList<>();
         }
 
-        if (MINERU_SUPPORTED.contains(fileType)){
+        if ("true".equalsIgnoreCase(hasGPU) && MINERU_SUPPORTED.contains(fileType)){
             finalChunks = pdf.mineruReader(file,fileType);
-        } else {
+        } else if ("pdf".equalsIgnoreCase(fileType)){
+            finalChunks = pdf.readPDF(file,fileType);
+        }else {
             // 使用Tika读取并解析为 Document 对象列表
             TikaDocumentReader tikaDocumentReader = new TikaDocumentReader(resource);
             List<Document> documents = tikaDocumentReader.read();

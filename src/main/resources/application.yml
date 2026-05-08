@@ -137,6 +137,7 @@ custom:
   mineru-backend: pipeline
   mineru-return_md: true
   return_content_list: true
+  hasGPU: false
 
   embedding-name: Qwen/Qwen3-Embedding-8B
   rerank-name: Qwen/Qwen3-Reranker-8B
