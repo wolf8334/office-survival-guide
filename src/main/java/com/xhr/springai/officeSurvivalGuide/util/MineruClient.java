@@ -32,6 +32,9 @@ public class MineruClient {
     @Value("${custom.return_content_list}")
     private String return_content_list;
 
+    @Value("${custom.return_images:false}")
+    private String return_images;
+
 
     private final WebClient.Builder webClient;
 
@@ -45,10 +48,12 @@ public class MineruClient {
             body.add("return_md", returnmd);
             body.add("backend", backend);
             body.add("return_content_list", return_content_list);
+            body.add("return_images", return_images);
 
             tempFile.deleteOnExit();
 
-            return webClient.build().post()
+            return webClient.codecs(c -> c.defaultCodecs().maxInMemorySize(100 * 1024 * 1024))
+                    .build().post()
                     .uri(mineruUrl)
                     .contentType(MediaType.MULTIPART_FORM_DATA)  // 换成 multipart
                     .bodyValue(body)                              // body 是 MultiValueMap

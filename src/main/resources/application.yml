@@ -135,9 +135,10 @@ custom:
 
   mineru-url: ${MINERU_URL}
   mineru-backend: pipeline
-  mineru-return_md: true
+  mineru-return_md: false
   return_content_list: true
-  hasGPU: false
+  return_images: false
+  hasGPU: true
 
   embedding-name: Qwen/Qwen3-Embedding-8B
   rerank-name: Qwen/Qwen3-Reranker-8B
