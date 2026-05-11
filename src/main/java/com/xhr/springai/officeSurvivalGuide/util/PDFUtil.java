@@ -79,7 +79,7 @@ public class PDFUtil {
                                 doc.getMetadata().put("chunkIndex", chunkIndex++);
                                 docs.add(doc);
 
-                                log.info("保存文件 {} 第 {} 页，标题为 {}",file.getResource().getFilename(),currentPage,currentSection);
+                                //log.info("保存文件 {} 第 {} 页，标题为 {}",file.getResource().getFilename(),currentPage,currentSection);
                                 current = new StringBuilder();
                             }
 
@@ -105,7 +105,7 @@ public class PDFUtil {
                         doc.getMetadata().put("pageNum", currentPage);
                         doc.getMetadata().put("chunkIndex", chunkIndex);
 
-                        log.info("保存文件 {} 第 {} 页，标题为 {}",file.getResource().getFilename(),currentPage,currentSection);
+                        //log.info("保存文件 {} 第 {} 页，标题为 {}",file.getResource().getFilename(),currentPage,currentSection);
                         docs.add(doc);
                     }
                 }

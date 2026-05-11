@@ -46,7 +46,7 @@ public class JSONUtil {
 
     public String parseObject(Object obj) {
         try {
-            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj);
+            return objectMapper.writeValueAsString(obj);
         } catch (JsonProcessingException e) {
             return "";
         }

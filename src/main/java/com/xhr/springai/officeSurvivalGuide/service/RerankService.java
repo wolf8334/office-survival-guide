@@ -134,18 +134,25 @@ public class RerankService {
         }
 
         // 3. 文本转换：如果文件很大，需切分为模型可接受的 Token 块
-//        List<Document> splitDocs = split(finalChunks);
-//        log.info("转换文件完成,共{}组",splitDocs.size());
+        List<Document> splitDocs = split(finalChunks);
+        log.info("转换文件完成,共{}组",splitDocs.size());
 
-        return finalChunks;
+        return splitDocs;
     }
 
     public void addDocumentToMySQL(List<Document> documents){
         String clean = "delete from knowledge_chunks where doc_id = '%s'".formatted(documents.getFirst().getMetadata().get("filename"));
         jdbcTemplate.execute(clean);
 
-        String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values ('%s',?,?,'%s');";
-        documents.forEach(doc -> jdbcTemplate.update(sql.formatted(doc.getId(),json.parseObject(doc.getMetadata())),doc.getMetadata().get("filename"),doc.getText()));
+        String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values (?,?,?,?);";
+        documents.forEach(doc -> {
+            try {
+                jdbcTemplate.update(sql,doc.getId(),doc.getMetadata().get("filename"), doc.getText(),json.parseObject(doc.getMetadata()));
+            } catch (Exception e){
+                log.info("metadata {}",json.parseObject(doc.getMetadata()));
+                e.printStackTrace();
+            }
+        });
     }
 
     public String getResourceType(Resource resource){
