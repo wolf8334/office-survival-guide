@@ -43,7 +43,7 @@ public class PDFUtil {
     public List<Document> mineruReader(MultipartFile file,String fileType) {
         List<Document> docs = new ArrayList<>();
         String ret = mineru.call(file);
-        log.info("使用MinerU解析文件返回{}",ret);
+        log.info("使用MinerU解析文件完成");
 
         if (StringUtils.isNoneEmpty(ret)){
             try {
