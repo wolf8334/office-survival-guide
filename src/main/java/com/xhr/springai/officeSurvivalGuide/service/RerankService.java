@@ -141,18 +141,22 @@ public class RerankService {
     }
 
     public void addDocumentToMySQL(List<Document> documents){
-        String clean = "delete from knowledge_chunks where doc_id = '%s'".formatted(documents.getFirst().getMetadata().get("filename"));
-        jdbcTemplate.execute(clean);
+        if (documents.isEmpty()){
+            log.info("解析结果为空");
+        } else {
+            String clean = "delete from knowledge_chunks where doc_id = '%s'".formatted(documents.getFirst().getMetadata().get("filename"));
+            jdbcTemplate.execute(clean);
 
-        String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values (?,?,?,?);";
-        documents.forEach(doc -> {
-            try {
-                jdbcTemplate.update(sql,doc.getId(),doc.getMetadata().get("filename"), doc.getText(),json.parseObject(doc.getMetadata()));
-            } catch (Exception e){
-                log.info("metadata {}",json.parseObject(doc.getMetadata()));
-                e.printStackTrace();
-            }
-        });
+            String sql = "insert into knowledge_chunks (id, doc_id, content, metadata) values (?,?,?,?);";
+            documents.forEach(doc -> {
+                try {
+                    jdbcTemplate.update(sql, doc.getId(), doc.getMetadata().get("filename"), doc.getText(), json.parseObject(doc.getMetadata()));
+                } catch (Exception e) {
+                    log.info("metadata {}", json.parseObject(doc.getMetadata()));
+                    e.printStackTrace();
+                }
+            });
+        }
     }
 
     public String getResourceType(Resource resource){
@@ -166,7 +170,9 @@ public class RerankService {
 
     public List<Document> getFullDocument(List<Document> documents){
         String filename = documents.getFirst().getMetadata().get("filename").toString();
-        List<Integer> pageNums = documents.stream().map(doc -> Integer.parseInt(doc.getMetadata().get("pageNum").toString())).distinct().toList();
+        List<Integer> pageNums = documents.stream()
+                .filter(Objects::nonNull).filter(doc -> doc.getMetadata().get("pageNum") != null)
+                .map(doc -> Integer.parseInt(doc.getMetadata().get("pageNum").toString())).distinct().toList();
         String sql = """
                 select * from knowledge_chunks where metadata->>'$.filename' = '%s' and metadata->>'$.pageNum' + 0 in (%s)
                 order by metadata->>'$.pageNum' + 0,metadata->>'$.chunk_index' + 0

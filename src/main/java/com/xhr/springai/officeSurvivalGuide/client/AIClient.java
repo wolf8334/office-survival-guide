@@ -2,6 +2,8 @@ package com.xhr.springai.officeSurvivalGuide.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xhr.springai.officeSurvivalGuide.bean.LLMRequest;
+import com.xhr.springai.officeSurvivalGuide.service.LLMRequestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
@@ -17,6 +19,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Component
@@ -25,32 +28,69 @@ public class AIClient {
 
     private final WebClient.Builder webClient;
     private final ObjectMapper objectMapper;
+    private final LLMRequestService logService;
 
     public AIResponse chat(AIRequest req) {
-        Map<String, Object> body = buildBody(req);
+        long start = System.currentTimeMillis();
 
-        String raw = webClient.build().post()
-                .uri(req.getBaseUrl() + "/chat/completions")
-                .header("Authorization", "Bearer " + req.getApiKey())
-                .header("Content-Type", "application/json")
-                .bodyValue(body)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, response ->
-                        response.bodyToMono(String.class)
-                                .flatMap(errorBody -> {
-                                    log.error("错误响应体: {}", errorBody);
-                                    return Mono.error(new RuntimeException(errorBody));
-                                })
-                )
-                .bodyToMono(String.class)
-                .block();
+        LLMRequest logReq = new LLMRequest();
+        logReq.setModelName(req.getModel());
+        logReq.setEndpoint(req.getBaseUrl() + "/chat/completions");
+        logReq.setPrompt(buildPromptText(req));
+        logReq.setSuccess(true);
+        Long logId = logService.save(logReq);
 
-        return parseResponse(raw);
+        try {
+            Map<String, Object> body = buildBody(req);
+
+            String raw = webClient.build().post()
+                    .uri(req.getBaseUrl() + "/chat/completions")
+                    .header("Authorization", "Bearer " + req.getApiKey())
+                    .header("Content-Type", "application/json")
+                    .bodyValue(body)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, response ->
+                            response.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        log.error("错误响应体: {}", errorBody);
+                                        return Mono.error(new RuntimeException(errorBody));
+                                    })
+                    )
+                    .bodyToMono(String.class)
+                    .block();
+
+            AIResponse aiResp = parseResponse(raw);
+            int durationMs = (int) (System.currentTimeMillis() - start);
+
+            logService.updateResponse(logId, aiResp.getContent(),
+                    (int) aiResp.getPromptTokens(), (int) aiResp.getCompletionTokens(),
+                    (int) aiResp.getTotalTokens(),
+                    aiResp.getFinishReason(), 200, null, true, durationMs);
+
+            return aiResp;
+        } catch (Exception e) {
+            int durationMs = (int) (System.currentTimeMillis() - start);
+            logService.updateResponse(logId, null, null, null, null,
+                    "error", 500, e.getMessage(), false, durationMs);
+            throw e;
+        }
     }
 
     public Flux<String> chatStream(AIRequest req) {
+        long start = System.currentTimeMillis();
+
+        LLMRequest logReq = new LLMRequest();
+        logReq.setModelName(req.getModel());
+        logReq.setEndpoint(req.getBaseUrl() + "/chat/completions");
+        logReq.setPrompt(buildPromptText(req));
+        logReq.setSuccess(true);
+        Long logId = logService.save(logReq);
+
         Map<String, Object> body = buildBody(req);
         body.put("stream", true);
+
+        StringBuilder fullResponse = new StringBuilder();
+        AtomicReference<JsonNode> lastUsage = new AtomicReference<>();
 
         return webClient.build().post()
                 .uri(req.getBaseUrl() + "/chat/completions")
@@ -60,6 +100,15 @@ public class AIClient {
                 .retrieve()
                 .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<String>>() {})
                 .filter(sse -> sse.data() != null && !sse.data().equals("[DONE]"))
+                .doOnNext(sse -> {
+                    try {
+                        JsonNode node = objectMapper.readTree(sse.data());
+                        if (node.has("usage") && !node.get("usage").isNull()) {
+                            lastUsage.set(node.get("usage"));
+                        }
+                    } catch (Exception ignored) {
+                    }
+                })
                 .mapNotNull(sse -> {
                     try {
                         JsonNode node = objectMapper.readTree(sse.data());
@@ -69,15 +118,35 @@ public class AIClient {
                         String content = delta.path("content").asText("");
 
                         if (!reasoning.isEmpty()) {
-                            return "\u0001" + reasoning.replaceAll("\\n{2,}", "\n\n");  // 用不可见字符标记是 reasoning
+                            fullResponse.append(reasoning);
+                            return "\u0001" + reasoning.replaceAll("\\n{2,}", "\n\n");
                         }
                         if (!content.isEmpty()) {
+                            fullResponse.append(content);
                             return content.replaceAll("\\n{3,}", "\n\n");
                         }
                         return null;
                     } catch (Exception e) {
                         return null;
                     }
+                })
+                .doOnTerminate(() -> {
+                    int durationMs = (int) (System.currentTimeMillis() - start);
+                    JsonNode usage = lastUsage.get();
+                    Integer inputTokens = null;
+                    Integer outputTokens = null;
+                    Integer totalTokens = null;
+                    if (usage != null) {
+                        int pt = usage.path("prompt_tokens").asInt(-1);
+                        int ct = usage.path("completion_tokens").asInt(-1);
+                        int tt = usage.path("total_tokens").asInt(-1);
+                        if (pt >= 0) inputTokens = pt;
+                        if (ct >= 0) outputTokens = ct;
+                        if (tt >= 0) totalTokens = tt;
+                    }
+                    logService.updateResponse(logId, fullResponse.toString(),
+                            inputTokens, outputTokens, totalTokens,
+                            "stream", 200, null, true, durationMs);
                 });
     }
 
@@ -153,5 +222,22 @@ public class AIClient {
         } catch (Exception e) {
             throw new RuntimeException("解析响应失败: " + raw, e);
         }
+    }
+
+    private String buildPromptText(AIRequest req) {
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.hasText(req.getSystem())) {
+            sb.append("[system] ").append(req.getSystem());
+            if (StringUtils.hasText(req.getUser())) {
+                sb.append(" ");
+            }
+        }
+        if (StringUtils.hasText(req.getUser())) {
+            sb.append("[user] ").append(req.getUser());
+        }
+        if (StringUtils.hasText(req.getImageBase64())) {
+            sb.append(" [image]");
+        }
+        return sb.toString();
     }
 }

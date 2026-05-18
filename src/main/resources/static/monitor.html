@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>信息查看 - LLM 调用监控</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus/dist/index.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f4f0;
+            color: #1f2937;
+            font-size: 14px;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            background: #fff;
+            border-bottom: 1px solid #e8e6e0;
+            padding: 0 24px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar a { color: #888; text-decoration: none; font-size: 14px; transition: color 0.2s; }
+        .navbar a:hover { color: #333; }
+        .navbar .title { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+        .navbar .spacer { flex: 1; }
+
+        .container { max-width: 1500px; margin: 0 auto; padding: 20px 24px; }
+
+        /* 统计卡片 */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 18px 22px;
+            border: 1px solid #e8e6e0;
+        }
+        .stat-label { font-size: 13px; color: #888; margin-bottom: 8px; }
+        .stat-value { font-size: 26px; font-weight: 700; color: #1a1a1a; }
+        .stat-unit  { font-size: 14px; color: #bbb; font-weight: 400; margin-left: 4px; }
+
+        /* 工具栏 */
+        .toolbar { display: flex; align-items: center; margin-bottom: 12px; gap: 10px; }
+        .toolbar-title { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+        .toolbar-sub   { font-size: 14px; color: #aaa; }
+
+        /* 表格容器 */
+        .table-wrap {
+            background: #fff;
+            border-radius: 10px;
+            border: 1px solid #e8e6e0;
+            overflow: hidden;
+        }
+
+        /* 表格 */
+        .log-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .log-table thead { background: #fafaf8; }
+        .log-table th {
+            padding: 11px 14px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            border-bottom: 1px solid #e8e6e0;
+            white-space: nowrap;
+        }
+        .log-table td {
+            padding: 13px 14px;
+            border-bottom: 1px solid #f3f3f1;
+            vertical-align: middle;
+            color: #374151;
+        }
+        .log-table tbody tr { transition: background 0.1s; }
+        .log-table tbody tr:hover { background: #fafaf8; }
+        .log-table tbody tr:last-child td { border-bottom: none; }
+
+        /* badge */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .badge-ok      { background: #e8f5e9; color: #2e7d32; }
+        .badge-fail    { background: #fbe9e7; color: #c62828; }
+        .badge-stop    { background: #ede7f6; color: #512da8; }
+        .badge-stream  { background: #e3f2fd; color: #1565c0; }
+        .badge-error   { background: #fbe9e7; color: #c62828; }
+        .badge-length  { background: #fff8e1; color: #ef6c00; }
+        .badge-default { background: #f3f4f6; color: #6b7280; }
+
+        /* Token */
+        .token-row  { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+        .token-item { display: flex; align-items: center; gap: 4px; }
+        .dot        { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .dot-in     { background: #3b82f6; }
+        .dot-out    { background: #10b981; }
+        .dot-total  { background: #8b5cf6; }
+        .tnum       { font-family: 'SF Mono', Menlo, monospace; font-size: 13px; font-weight: 600; color: #374151; }
+
+        /* 时间：等宽字体，不折断 */
+        .time-cell {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 13px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        /* 耗时 */
+        .dur      { font-family: 'SF Mono', Menlo, monospace; font-size: 13px; color: #9ca3af; white-space: nowrap; }
+        .dur-slow { color: #dc2626; font-weight: 700; }
+
+        /* 模型名 */
+        .model-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #1a1a1a;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 内容单元格 */
+        .content-cell { min-width: 200px; max-width: 300px; }
+        .content-preview {
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: default;
+        }
+        .trunc-tag {
+            display: inline-block;
+            margin-top: 3px;
+            padding: 1px 6px;
+            background: #fff8e1;
+            color: #ef6c00;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* 错误 */
+        .text-error {
+            font-size: 13px;
+            color: #dc2626;
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 分页 */
+        .pagination-wrap { display: flex; justify-content: center; padding: 16px; border-top: 1px solid #e8e6e0; }
+
+        /* 空状态 */
+        .empty-state { text-align: center; padding: 60px 20px; color: #bbb; font-size: 15px; }
+
+        /* 刷新按钮 */
+        .refresh-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border-radius: 7px;
+            border: 1px solid #e8e6e0; background: #fff;
+            cursor: pointer; font-size: 14px; color: #444;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .refresh-btn:hover  { background: #f5f4f0; border-color: #ccc; }
+        .refresh-btn:active { transform: scale(0.97); }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+<div id="app">
+
+    <div class="navbar">
+        <a href="index.html">← 首页</a>
+        <span class="title">LLM 调用监控</span>
+        <div class="spacer"></div>
+        <button class="refresh-btn" @click="refresh" :disabled="loading">
+            {{ loading ? '加载中...' : '🔄 刷新' }}
+        </button>
+    </div>
+
+    <div class="container">
+
+        <!-- 统计卡片 -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-label">总请求数</div>
+                <div class="stat-value">{{ total }}<span class="stat-unit">次</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">当页 Token 消耗</div>
+                <div class="stat-value">{{ formatNum(pageTokens) }}<span class="stat-unit">个</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">当页平均耗时</div>
+                <div class="stat-value">{{ avgDuration }}<span class="stat-unit">ms</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">当页成功率</div>
+                <div class="stat-value">{{ successRate }}<span class="stat-unit">%</span></div>
+            </div>
+        </div>
+
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <span class="toolbar-title">请求日志</span>
+            <span class="toolbar-sub"></span>
+        </div>
+
+        <!-- 表格 -->
+        <div class="table-wrap">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th style="width:160px">时间</th>
+                        <th style="width:155px">模型</th>
+                        <th style="width:175px">Token（入 / 出 / 合计）</th>
+                        <th style="width:80px">耗时</th>
+                        <th style="width:72px">完成</th>
+                        <th style="width:60px">状态</th>
+                        <th>发送内容</th>
+                        <th>响应内容</th>
+                        <th style="width:180px">错误信息</th>
+                    </tr>
+                </thead>
+                <tbody v-if="tableData.length">
+                    <tr v-for="row in tableData" :key="row.id">
+
+                        <!-- 时间：不折断 -->
+                        <td><span class="time-cell">{{ formatTime(row.created_at) }}</span></td>
+
+                        <!-- 模型 -->
+                        <td>
+                            <el-tooltip :content="row.model_name || '-'" placement="top" :show-after="400">
+                                <div class="model-name">{{ row.model_name || '-' }}</div>
+                            </el-tooltip>
+                        </td>
+
+                        <!-- Token -->
+                        <td>
+                            <div class="token-row">
+                                <el-tooltip content="输入 Token" placement="top">
+                                    <div class="token-item">
+                                        <span class="dot dot-in"></span>
+                                        <span class="tnum">{{ row.input_tokens ?? '-' }}</span>
+                                    </div>
+                                </el-tooltip>
+                                <el-tooltip content="输出 Token" placement="top">
+                                    <div class="token-item">
+                                        <span class="dot dot-out"></span>
+                                        <span class="tnum">{{ row.output_tokens ?? '-' }}</span>
+                                    </div>
+                                </el-tooltip>
+                                <el-tooltip content="合计 Token" placement="top">
+                                    <div class="token-item">
+                                        <span class="dot dot-total"></span>
+                                        <span class="tnum">{{ row.total_tokens ?? '-' }}</span>
+                                    </div>
+                                </el-tooltip>
+                            </div>
+                        </td>
+
+                        <!-- 耗时 -->
+                        <td>
+                            <span class="dur" :class="{ 'dur-slow': row.duration_ms > 10000 }">
+                                {{ row.duration_ms != null ? row.duration_ms + ' ms' : '-' }}
+                            </span>
+                        </td>
+
+                        <!-- 完成原因 -->
+                        <td>
+                            <span :class="['badge', finishClass(row.finish_reason)]">
+                                {{ row.finish_reason || '-' }}
+                            </span>
+                        </td>
+
+                        <!-- 状态 -->
+                        <td>
+                            <span :class="['badge', row.success === true ? 'badge-ok' : 'badge-fail']">
+                                {{ row.success === true ? 'OK' : 'FAIL' }}
+                            </span>
+                        </td>
+
+                        <!-- 发送内容 -->
+                        <td class="content-cell">
+                            <el-tooltip :content="row.prompt || '-'" placement="top" :show-after="400"
+                                        effect="light" popper-class="content-tooltip">
+                                <div class="content-preview">{{ row.prompt || '-' }}</div>
+                            </el-tooltip>
+                            <span v-if="row.prompt_truncated === 1" class="trunc-tag">已截断</span>
+                        </td>
+
+                        <!-- 响应内容 -->
+                        <td class="content-cell">
+                            <el-tooltip :content="row.response || '-'" placement="top" :show-after="400"
+                                        effect="light" popper-class="content-tooltip">
+                                <div class="content-preview">{{ row.response || '-' }}</div>
+                            </el-tooltip>
+                            <span v-if="row.response_truncated === 1" class="trunc-tag">已截断</span>
+                        </td>
+
+                        <!-- 错误信息 -->
+                        <td>
+                            <el-tooltip v-if="row.error_message" :content="row.error_message"
+                                        placement="top" :show-after="400">
+                                <div class="text-error">{{ row.error_message }}</div>
+                            </el-tooltip>
+                        </td>
+
+                    </tr>
+                </tbody>
+                <tbody v-else>
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-state">{{ loading ? '加载中...' : '暂无数据' }}</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="pagination-wrap" v-if="total > pageSize">
+                <el-pagination
+                    v-model:current-page="currentPage"
+                    :page-size="pageSize"
+                    :total="total"
+                    layout="prev, pager, next, total"
+                    @current-change="fetchData"
+                    background
+                />
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+.content-tooltip {
+    max-width: 520px !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    font-size: 13px !important;
+    line-height: 1.65 !important;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus"></script>
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+createApp({
+    setup() {
+        const tableData   = ref([]);
+        const loading     = ref(false);
+        const currentPage = ref(1);
+        const pageSize    = ref(20);
+        const total       = ref(0);
+
+        const pageTokens = computed(() =>
+            tableData.value.reduce((s, r) => s + (r.total_tokens || 0), 0)
+        );
+
+        const avgDuration = computed(() => {
+            const valid = tableData.value.filter(r => r.duration_ms != null);
+            if (!valid.length) return '-';
+            return Math.round(valid.reduce((s, r) => s + r.duration_ms, 0) / valid.length);
+        });
+
+        const successRate = computed(() => {
+            if (!tableData.value.length) return '-';
+            const ok = tableData.value.filter(r => r.success === true).length;
+            return Math.round(ok / tableData.value.length * 100);
+        });
+
+        function formatTime(ts) {
+            if (!ts) return '-';
+            return String(ts).substring(0, 19).replace('T', ' ');
+        }
+
+        function formatNum(n) {
+            if (!n) return 0;
+            if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+            if (n >= 1000)  return (n / 1000).toFixed(1) + 'k';
+            return n;
+        }
+
+        function finishClass(r) {
+            const map = { stop: 'badge-stop', stream: 'badge-stream', error: 'badge-error', length: 'badge-length' };
+            return map[r] || 'badge-default';
+        }
+
+        async function fetchData() {
+            loading.value = true;
+            try {
+                const res  = await fetch(`/osg/llm/logs?page=${currentPage.value}&size=${pageSize.value}`);
+                const json = await res.json();
+                tableData.value = json.data  || [];
+                total.value     = json.total || 0;
+            } catch (e) {
+                console.error(e);
+            } finally {
+                loading.value = false;
+            }
+        }
+
+        function refresh() { currentPage.value = 1; fetchData(); }
+
+        onMounted(fetchData);
+
+        return {
+            tableData, loading, currentPage, pageSize, total,
+            pageTokens, avgDuration, successRate,
+            fetchData, refresh, formatTime, formatNum, finishClass
+        };
+    }
+}).use(ElementPlus).mount('#app');
+</script>
+</body>
+</html>

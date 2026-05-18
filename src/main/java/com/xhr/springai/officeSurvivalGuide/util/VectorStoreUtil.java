@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -55,37 +56,35 @@ public class VectorStoreUtil {
     }
 
     public List<Document> similaritySearch(@NotNull String requirement) {
-        return this.similaritySearch(requirement,-1,-1,null);
+        return similaritySearch(requirement,-1,-1,(Filter.Expression)null);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, int topk) {
-        return this.similaritySearch(requirement,topk,-1,null);
+        return similaritySearch(requirement,topk,-1,(Filter.Expression)null);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, double threshold) {
-        return this.similaritySearch(requirement,-1,threshold,null);
+        return similaritySearch(requirement,-1,threshold,(Filter.Expression)null);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement,String filter) {
-        return this.similaritySearch(requirement,-1,-1,filter);
+        return similaritySearch(requirement,-1,-1,filter);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, int topk,String filter) {
-        return this.similaritySearch(requirement,topk,-1,filter);
+        return similaritySearch(requirement,topk,-1,filter);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, double threshold,String filter) {
-        return this.similaritySearch(requirement,-1,threshold,filter);
+        return similaritySearch(requirement,-1,threshold,filter);
     }
 
     public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold) {
-        return this.similaritySearch(requirement,topk,threshold,null);
+        return similaritySearch(requirement,topk,threshold,(Filter.Expression)null);
     }
 
-
-    public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold,String filter) {
+    public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold, Filter.Expression filterExpression) {
         SearchRequest.Builder similaritySearchBuilder = SearchRequest.builder().query(requirement);
-        FilterExpressionBuilder b = new FilterExpressionBuilder();
 
         if (topk > 0) {
             similaritySearchBuilder.topK(topk);
@@ -99,10 +98,51 @@ public class VectorStoreUtil {
             log.info("threshold无效，忽略");
         }
 
-        if (filter != null) {
-            similaritySearchBuilder.filterExpression(b.eq("type",filter).build());
+        if (filterExpression != null) {
+            similaritySearchBuilder.filterExpression(filterExpression);
         }
 
         return vectorStore.similaritySearch(similaritySearchBuilder.build());
+    }
+
+    public List<Document> similaritySearch(@NotNull String requirement, int topk, double threshold,String filter) {
+        if (filter == null) {
+            return similaritySearch(requirement, topk, threshold, (Filter.Expression)null);
+        }
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
+        return similaritySearch(requirement, topk, threshold, b.eq("type",filter).build());
+    }
+
+    public Filter.Expression eq(String key, Object value) {
+        return new FilterExpressionBuilder().eq(key, value).build();
+    }
+
+    public Filter.Expression in(String key, Object... values) {
+        return new FilterExpressionBuilder().in(key, values).build();
+    }
+
+    public Filter.Expression or(String key, List<?> values) {
+        if (values == null || values.isEmpty()) return null;
+        return new FilterExpressionBuilder().in(key, new ArrayList<>(values)).build();
+    }
+
+    public Filter.Expression or(Filter.Expression... expressions) {
+        if (expressions == null || expressions.length == 0) return null;
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
+        Filter.Expression result = expressions[0];
+        for (int i = 1; i < expressions.length; i++) {
+            result = b.or(new FilterExpressionBuilder.Op(result), new FilterExpressionBuilder.Op(expressions[i])).build();
+        }
+        return result;
+    }
+
+    public Filter.Expression and(Filter.Expression... expressions) {
+        if (expressions == null || expressions.length == 0) return null;
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
+        Filter.Expression result = expressions[0];
+        for (int i = 1; i < expressions.length; i++) {
+            result = b.and(new FilterExpressionBuilder.Op(result), new FilterExpressionBuilder.Op(expressions[i])).build();
+        }
+        return result;
     }
 }

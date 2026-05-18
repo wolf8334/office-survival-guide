@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -46,7 +47,7 @@ public class LLMUtil {
         log.info(Arrays.toString(vector));
 
         // 2 查询向量库，搜索相关内容
-        String knowledgeContext = vectorSearch(afterPurified, 10, 0.55);
+        String knowledgeContext = vectorSearch(afterPurified, 10, 0.3);
 
         expansionPrompt = expansionPrompt.formatted(knowledgeContext);
 
@@ -151,45 +152,94 @@ public class LLMUtil {
         return requirement;
     }
 
+    @SuppressWarnings("unchecked")
     public String vectorSearch(String afterPurified, int topk, double thresold) {
-        List<Document> similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold);
+        log.info("=== 开始两阶段向量检索 ===");
 
-        String knowledgeContext = "";
-        if (similarDocs != null && similarDocs.isEmpty()) {
-            log.info("vectorSearch 未查询到相关数据，尝试使用通用知识回答");
+        log.info("阶段 1: 检索摘要文档定位章节");
+        Filter.Expression abstractFilter = vectorStore.eq("isAbstract", 1);
+        List<Document> abstractDocs = vectorStore.similaritySearch(afterPurified, 5, thresold, abstractFilter);
+
+        log.info("阶段 1 完成，找到 {} 条摘要文档", abstractDocs.size());
+
+        List<Document> similarDocs;
+
+        if (abstractDocs.isEmpty()) {
+            log.info("摘要层未找到相关文档，降级为普通检索");
+            similarDocs = vectorStore.similaritySearch(afterPurified, topk, thresold);
         } else {
-            log.info("vector查询完毕");
+            Set<List<String>> relevantPaths = abstractDocs.stream()
+                    .map(doc -> (List<String>) doc.getMetadata().get("hierarchyPath"))
+                    .filter(path -> path != null && !path.isEmpty())
+                    .collect(Collectors.toSet());
 
-            if (similarDocs != null) {
-                log.info(">>> RAG 检索到的上下文 ({}条):", similarDocs.size());
+            log.info("提取到 {} 个相关章节路径", relevantPaths.size());
 
-                List<Map<String, Object>> bm25 = BM25Search(afterPurified, 50);
+            if (relevantPaths.isEmpty()) {
+                similarDocs = abstractDocs;
+            } else {
+                log.info("阶段 2: 在相关章节内检索具体内容");
 
-                List<String> vectorIds = similarDocs.stream().map(Document::getId).toList();
-                List<String> bm25Ids = bm25.stream().map(m -> m.get("id").toString()).toList();
-                List<String> rrfIds = rrfCombine(vectorIds, bm25Ids);
+                List<String> allNodeIds = relevantPaths.stream()
+                        .flatMap(List::stream)
+                        .distinct()
+                        .toList();
 
-                List<Document> finalSimilarDocs = similarDocs;
-                similarDocs = rrfIds.stream().limit(15).map(id -> finalSimilarDocs.stream().filter(doc -> doc.getId().equals(id)).findFirst().orElse(null)).filter(Objects::nonNull).toList();
+                log.info("相关 nodeId 数量：{}", allNodeIds.size());
 
-                log.info("RRF评分后");
-                similarDocs.forEach(this::convertDocumentForPrint);
+                Filter.Expression pathFilter = vectorStore.or("hierarchyPath", allNodeIds);
+                Filter.Expression contentFilter = vectorStore.eq("isAbstract", 0);
+                Filter.Expression finalFilter = vectorStore.and(pathFilter, contentFilter);
 
-                similarDocs = rerank.rerank(afterPurified, similarDocs);
+                List<Document> contentDocs = vectorStore.similaritySearch(
+                        afterPurified, topk, thresold, finalFilter);
 
-                log.info("重排序后共{}条",similarDocs.size());
-                similarDocs.forEach(this::convertDocumentForPrint);
+                log.info("阶段 2 完成，找到 {} 条内容文档", contentDocs.size());
 
-                //根据rerank的结果，按照其中的文件名、页码，从MySQL取出完整内容
-                similarDocs = rerank.getFullDocument(similarDocs);
+                similarDocs = new ArrayList<>(abstractDocs);
+                similarDocs.addAll(contentDocs);
 
-                log.info("上下文窗口扩展后共{}条",similarDocs.size());
-                similarDocs.forEach(this::convertDocumentForPrint);
-
-                knowledgeContext = similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
+                similarDocs = similarDocs.stream()
+                        .collect(Collectors.toMap(
+                                Document::getId,
+                                doc -> doc,
+                                (existing, replacement) -> existing,
+                                LinkedHashMap::new))
+                        .values()
+                        .stream()
+                        .limit(topk)
+                        .toList();
             }
         }
-        return knowledgeContext;
+
+        if (similarDocs != null) {
+            log.info("向量搜索查询完毕，共{}条文档", similarDocs.size());
+
+            List<Map<String, Object>> bm25 = BM25Search(afterPurified, 50);
+
+            List<String> vectorIds = similarDocs.stream().map(Document::getId).toList();
+            List<String> bm25Ids = bm25.stream().map(m -> m.get("id").toString()).toList();
+            List<String> rrfIds = rrfCombine(vectorIds, bm25Ids);
+
+            List<Document> finalSimilarDocs = similarDocs;
+            similarDocs = rrfIds.stream().limit(15).map(id -> finalSimilarDocs.stream().filter(doc -> doc.getId().equals(id)).findFirst().orElse(null)).filter(Objects::nonNull).toList();
+
+            log.info("RRF 评分后");
+            similarDocs.forEach(this::convertDocumentForPrint);
+
+            similarDocs = rerank.rerank(afterPurified, similarDocs);
+
+            log.info("重排序后共{}条", similarDocs.size());
+            similarDocs.forEach(this::convertDocumentForPrint);
+
+            similarDocs = rerank.getFullDocument(similarDocs);
+
+            log.info("上下文窗口扩展后共{}条", similarDocs.size());
+            similarDocs.forEach(this::convertDocumentForPrint);
+
+            return similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
+        }
+        return "";
     }
 
     /**
@@ -219,7 +269,7 @@ public class LLMUtil {
         return knowledgeContext;
     }
 
-    public String getExpertKonwledge(){
+    public String getExpertKonwledge() {
         String sql = "select concat(' - ',explanation) as expertKnowledge from sys_expert_rules";
         return jdbcTemplate.queryForList(sql).stream().map(m -> String.valueOf(m.get("expertKnowledge"))).collect(Collectors.joining("\n"));
     }
