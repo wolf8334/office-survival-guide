@@ -6,6 +6,8 @@ import com.xhr.springai.officeSurvivalGuide.config.enums.TARGET_TYPE;
 import com.xhr.springai.officeSurvivalGuide.config.enums.TIME_SCOPE;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class IntentClassification {
 
@@ -31,7 +33,7 @@ public class IntentClassification {
     public String department;
 
     //标准检索语句
-    public String query_rewrite;
+    public List<String> query_rewrite;
 
     //回答方式
     public ANSWER_STYLE answer_style;

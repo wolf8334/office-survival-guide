@@ -277,6 +277,7 @@ public class LLMUtil {
     private String filterThinkAnswer(String rawResponse) {
         // 使用正则表达式：(?s) 表示让 . 匹配包括换行符在内的所有字符
         // <think>.*?</think> 匹配从开始标签到结束标签的所有内容
+        log.debug("rawResponse {}",rawResponse);
         return rawResponse.contains("</think>")
                 ? rawResponse.replaceAll("(?s).*?</think>", "").trim()
                 : rawResponse.trim();

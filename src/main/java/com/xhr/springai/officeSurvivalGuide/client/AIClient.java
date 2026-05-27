@@ -42,6 +42,7 @@ public class AIClient {
 
         try {
             Map<String, Object> body = buildBody(req);
+            log.debug("body {}",body);
 
             String raw = webClient.build().post()
                     .uri(req.getBaseUrl() + "/chat/completions")
@@ -188,6 +189,7 @@ public class AIClient {
 
     private AIResponse parseResponse(String raw) {
         try {
+            log.info("parseResponse {}",raw);
             JsonNode root = objectMapper.readTree(raw);
             JsonNode choice = root.path("choices").path(0);
 

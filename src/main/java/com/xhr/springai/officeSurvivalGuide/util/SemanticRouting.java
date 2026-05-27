@@ -22,9 +22,7 @@ public class SemanticRouting {
     public IntentClassification routeSemantic(String requirment) {
         String prompt = """
                你是一个意图识别器。请分析用户的问题，并按照枚举输出相关分类标签，使用JSON返回。
-               保持用户原始意图不变
-               不要缩小问题范围
-               如果问题比较宽泛，拆成2-3个子问题分别检索
+               保持用户原始意图不变，不要缩小问题范围，如果问题比较宽泛，拆成若干子问题分别检索
                
                answer_style表示回答方式，枚举如下。
                summary: 总体情况
