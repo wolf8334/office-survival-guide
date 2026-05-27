@@ -1,5 +1,6 @@
 package com.xhr.springai.officeSurvivalGuide.config;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.xhr.springai.officeSurvivalGuide.config.enums.ANSWER_STYLE;
 import com.xhr.springai.officeSurvivalGuide.config.enums.INTENT;
 import com.xhr.springai.officeSurvivalGuide.config.enums.TARGET_TYPE;
@@ -33,6 +34,7 @@ public class IntentClassification {
     public String department;
 
     //标准检索语句
+    @JsonDeserialize(using = FlexibleListDeserializer.class)
     public List<String> query_rewrite;
 
     //回答方式
