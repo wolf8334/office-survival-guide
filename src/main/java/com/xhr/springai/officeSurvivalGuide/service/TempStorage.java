@@ -10,14 +10,14 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class TempStorage {
 
-    private final RedisTemplate redisTemplate;
+    private final RedisTemplate<String,byte[]> redisTemplate;
 
     public void put(String token, byte[] data) {
         redisTemplate.opsForValue().set(token,data,1, TimeUnit.DAYS);
     }
 
     public byte[] get(String token) {
-        return (byte[])redisTemplate.opsForValue().get(token);
+        return redisTemplate.opsForValue().get(token);
     }
 
 }

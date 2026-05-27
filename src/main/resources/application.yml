@@ -69,15 +69,15 @@ spring:
           model: ${custom.qwen-name}
           temperature: 0.1
           top_p: 0.7
-#          stop:
-#            - "\n"
+          #          stop:
+          #            - "\n"
           frequency_penalty: 0.2
           presence_penalty: 0.1
           max_tokens: 8000
           max-completion-tokens: 2000000
       embedding:
         base-url: https://api.siliconflow.cn/
-        api-key:  ${SILICONFLOW_API_KEY}
+        api-key: ${SILICONFLOW_API_KEY}
         options:
           model: ${custom.embedding-name}
           dimensions: 4096
@@ -89,11 +89,11 @@ spring:
         collection-name: ${QDRANT_COLLECTION_NAME}
         use-tls: false
         initialize-schema: true
-#      pgvector:
-#        dimensions: 4096
-#        distance-type: COSINE_DISTANCE
-#        index-type: HNSW
-#        initialize-schema: false
+    #      vector:
+    #        dimensions: 4096
+    #        distance-type: COSINE_DISTANCE
+    #        index-type: HNSW
+    #        initialize-schema: false
     chat:
       memory:
         repository:
@@ -103,10 +103,10 @@ spring:
 
 custom:
   code:
-    url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    apiKey: ${BAILIAN_API_KEY}
-    name:  qwen3.6-35b-a3b #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash qwen3-coder-plus
-    tokens: 2000000
+    url: https://api.siliconflow.cn/
+    apiKey: ${SILICONFLOW_API_KEY}
+    name: Qwen/Qwen3.6-27B #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash qwen3-coder-plus
+    tokens: 30000
     stop:
       - "```"
       - "```json"
@@ -115,13 +115,13 @@ custom:
       top_p: 0.7
       frequency_penalty: 0.2
       presence_penalty: 0.1
-      max_tokens: 60000
-      max-completion-tokens: 2000000
+      max_tokens: 30000
+      max-completion-tokens: 30000
   chat:
-    url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    apiKey: ${BAILIAN_API_KEY}
-    name:  qwen3.5-27b
-    tokens: 50000
+    url: https://api.siliconflow.cn/
+    apiKey: ${SILICONFLOW_API_KEY}
+    name: Qwen/Qwen3.6-27B
+    tokens: 30000
     stop:
       - "```"
       - "```json"
@@ -130,8 +130,8 @@ custom:
       top_p: 0.7
       frequency_penalty: 0.2
       presence_penalty: 0.1
-      max_tokens: 60000
-      max-completion-tokens: 2000000
+      max_tokens: 30000
+      max-completion-tokens: 30000
 
   mineru-url: ${MINERU_URL}
   mineru-backend: pipeline
