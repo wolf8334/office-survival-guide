@@ -22,8 +22,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LLMRequestService {
 
-    private final JdbcTemplate jdbcTemplate;
     private static final int MAX_LENGTH = 1000;
+    private final JdbcTemplate jdbcTemplate;
     private String localIp;
 
     @PostConstruct
@@ -64,10 +64,7 @@ public class LLMRequestService {
         }
 
         String sql = """
-                INSERT INTO llm_request
-                (created_at, model_name, endpoint, input_tokens,
-                 prompt, prompt_truncated, success, user_id, ip)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO llm_request (created_at, model_name, endpoint, input_tokens, prompt, prompt_truncated, success, user_id, ip, error_message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
 
         jdbcTemplate.update(sql,
@@ -79,24 +76,20 @@ public class LLMRequestService {
                 req.getPromptTruncated(),
                 req.getSuccess() != null ? req.getSuccess() : true,
                 req.getUserId(),
-                req.getIp());
+                req.getIp(),
+                req.getErrorMessage());
 
-        Long id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
-        return id;
+        return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
     }
 
     @Async
     public void updateResponse(Long id, String response, Integer inputTokens, Integer outputTokens,
-                                Integer totalTokens, String finishReason, Integer statusCode,
-                                String errorMessage, Boolean success, Integer durationMs) {
+                               Integer totalTokens, String finishReason, Integer statusCode,
+                               String errorMessage, Boolean success, Integer durationMs) {
         var content = truncate(response);
 
         String sql = """
-                UPDATE llm_request SET
-                    response = ?, response_truncated = ?, input_tokens = ?, output_tokens = ?, total_tokens = ?,
-                    finish_reason = ?, status_code = ?, error_message = ?,
-                    success = ?, duration_ms = ?
-                WHERE id = ?
+                UPDATE llm_request SET response = ?, response_truncated = ?, input_tokens = ?, output_tokens = ?, total_tokens = ?, finish_reason = ?, status_code = ?, error_message = ?, success = ?, duration_ms = ? WHERE id = ?
                 """;
 
         jdbcTemplate.update(sql,
@@ -114,8 +107,6 @@ public class LLMRequestService {
 
         log.info("LLM 请求日志已更新, id={}, finish_reason={}, tokens={}", id, finishReason, totalTokens);
     }
-
-    private record TruncatedContent(String content, boolean truncated) {}
 
     private TruncatedContent truncate(String text) {
         if (text == null || text.isEmpty()) {
@@ -143,5 +134,8 @@ public class LLMRequestService {
     public long count() {
         Long result = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM llm_request", Long.class);
         return result != null ? result : 0;
+    }
+
+    private record TruncatedContent(String content, boolean truncated) {
     }
 }
