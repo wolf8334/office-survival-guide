@@ -211,7 +211,7 @@ public class AIClient {
             if (!"stop".equalsIgnoreCase(finishReason)) {
                 log.info("finish_reason: {} ", finishReason);
             }
-            log.info("promptTokens {} completionTokens {} totalTokens {}", promptTokens, completionTokens, promptTokens + completionTokens);
+            log.info("输入token {} 输出token {} 合计 {}", promptTokens, completionTokens, promptTokens + completionTokens);
 
             return AIResponse.builder()
                     .content(content)

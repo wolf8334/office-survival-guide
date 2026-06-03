@@ -66,13 +66,6 @@ public class MineruClient {
                                     return Mono.error(new RuntimeException(errorBody));
                                 });
                     })
-                    .onStatus(HttpStatusCode::isError, response ->
-                            response.bodyToMono(String.class)
-                                    .flatMap(errorBody -> {
-                                        log.error("MinerU错误: {}", errorBody);
-                                        return Mono.error(new RuntimeException(errorBody));
-                                    })
-                    )
                     .bodyToMono(String.class)
                     .block();
         } catch (Exception _) {

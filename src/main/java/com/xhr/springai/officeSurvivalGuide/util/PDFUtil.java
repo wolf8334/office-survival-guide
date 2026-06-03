@@ -158,7 +158,7 @@ public class PDFUtil {
         Semaphore semaphore = new Semaphore(3);
 
         List<CompletableFuture<String>> futures = IntStream.range(0, totalPage)
-                .<CompletableFuture<String>>mapToObj(pageIndex -> CompletableFuture.supplyAsync(() -> {
+                .mapToObj(pageIndex -> CompletableFuture.supplyAsync(() -> {
                     try {
                         semaphore.acquire();
                         try (PDDocument docu = Loader.loadPDF(new File(pdfPath))) {
