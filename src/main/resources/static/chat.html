@@ -91,14 +91,14 @@
     <div class="shell">
         <div class="header">
             <div class="brand">
-                <el-button text @click="goHome" style="font-size: 12px; color: #888;">← 返回首页</el-button>
+                <el-button text @click="goHome" style="font-size: 12px; color: #888;" data-testid="btn-go-home">← 返回首页</el-button>
                 <div class="brand-badge">SSE</div>
                 <div>
                     <h1>需求确认流式交互终端</h1>
                     <p>POST请求 · text/event-stream · Markdown / 原始内容 双视图</p>
                 </div>
             </div>
-            <div class="status-wrap">
+            <div class="status-wrap" data-testid="connection-status">
                 <span :class="['dot', statusType]"></span>
                 <span>{{ statusText }}</span>
             </div>
@@ -111,12 +111,13 @@
                     <div class="field">
                         <label>用户需求（参数名：userRequirement）</label>
                         <el-input v-model="userRequirement" type="textarea" :rows="10" resize="vertical"
-                            placeholder="请输入需求内容，例如：如果我要根据申请编号查询受电设备信息，应该使用哪个接口" />
+                            placeholder="请输入需求内容，例如：如果我要根据申请编号查询受电设备信息，应该使用哪个接口"
+                            data-testid="input-user-requirement" />
                     </div>
                     <div style="display:flex;gap:12px;flex-wrap:wrap;">
-                        <el-button type="primary" @click="startStream" :disabled="isStreaming">发起请求</el-button>
-                        <el-button @click="stopStream" :disabled="!isStreaming">中止流式</el-button>
-                        <el-button @click="clearOutput" :disabled="isStreaming">清空结果</el-button>
+                        <el-button type="primary" @click="startStream" :disabled="isStreaming" data-testid="btn-start-stream">发起请求</el-button>
+                        <el-button @click="stopStream" :disabled="!isStreaming" data-testid="btn-stop-stream">中止流式</el-button>
+                        <el-button @click="clearOutput" :disabled="isStreaming" data-testid="btn-clear-output">清空结果</el-button>
                     </div>
 
                     <div class="field" style="margin-top: 24px;">
@@ -142,47 +143,47 @@
                         <div><strong>说明：</strong>当前页面按纯文本 SSE 解析，并对 Markdown 做结构修复。</div>
                     </div>
 
-                    <div class="console" v-text="consoleText" ref="consoleRef"></div>
+                    <div class="console" v-text="consoleText" ref="consoleRef" data-testid="console-log"></div>
                 </div>
             </section>
 
             <section class="panel right-wrap">
                 <div class="panel-head">输出视图</div>
                 <div class="mode-actions">
-                    <el-button :type="viewMode === 'render' ? 'primary' : 'default'" @click="setViewMode('render')" round size="small">渲染视图</el-button>
-                    <el-button :type="viewMode === 'raw' ? 'primary' : 'default'" @click="setViewMode('raw')" round size="small">原文视图</el-button>
-                    <el-button :type="viewMode === 'split' ? 'primary' : 'default'" @click="setViewMode('split')" round size="small">对照视图</el-button>
+                    <el-button :type="viewMode === 'render' ? 'primary' : 'default'" @click="setViewMode('render')" round size="small" data-testid="btn-view-render">渲染视图</el-button>
+                    <el-button :type="viewMode === 'raw' ? 'primary' : 'default'" @click="setViewMode('raw')" round size="small" data-testid="btn-view-raw">原文视图</el-button>
+                    <el-button :type="viewMode === 'split' ? 'primary' : 'default'" @click="setViewMode('split')" round size="small" data-testid="btn-view-split">对照视图</el-button>
                 </div>
 
                 <template v-if="reasoningBuffer">
-                    <div style="margin:0 18px 12px;border:1px solid #e8e6e0;background:#f0f7ff;border-radius:8px;">
+                    <div style="margin:0 18px 12px;border:1px solid #e8e6e0;background:#f0f7ff;border-radius:8px;" data-testid="reasoning-container">
                         <div style="padding:10px 14px;font-size:12px;color:#888;border-bottom:1px solid #e8e6e0;font-weight:600;">💭 推理过程</div>
-                        <div style="padding:12px 14px;font-size:13px;color:#555;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;" v-html="reasoningHtml" ref="reasoningRef"></div>
+                        <div style="padding:12px 14px;font-size:13px;color:#555;line-height:1.7;white-space:pre-wrap;max-height:200px;overflow-y:auto;" v-html="reasoningHtml" ref="reasoningRef" data-testid="reasoning-output"></div>
                     </div>
                 </template>
 
-                <div class="output-toolbar">
+                <div class="output-toolbar" data-testid="output-toolbar">
                     <span>{{ viewerTitle }}</span>
                     <span>{{ progressText }}</span>
                 </div>
 
-                <div :class="['viewer', 'mode-' + viewMode]">
-                    <div class="render-pane pane">
+                <div :class="['viewer', 'mode-' + viewMode]" data-testid="viewer-output">
+                    <div class="render-pane pane" data-testid="pane-render">
                         <div class="pane-title">Markdown 渲染区</div>
-                        <div class="markdown" v-html="renderHtml"></div>
+                        <div class="markdown" v-html="renderHtml" data-testid="markdown-render"></div>
                     </div>
-                    <div class="raw-pane pane">
+                    <div class="raw-pane pane" data-testid="pane-raw">
                         <div class="pane-title">原始文本区</div>
-                        <div class="raw-text" v-text="rawText"></div>
+                        <div class="raw-text" v-text="rawText" data-testid="raw-text"></div>
                     </div>
-                    <div class="split-pane">
-                        <div class="pane">
+                    <div class="split-pane" data-testid="pane-split">
+                        <div class="pane" data-testid="split-render">
                             <div class="pane-title">Markdown 渲染区</div>
-                            <div class="markdown" v-html="renderHtml"></div>
+                            <div class="markdown" v-html="renderHtml" data-testid="split-markdown"></div>
                         </div>
-                        <div class="pane">
+                        <div class="pane" data-testid="split-raw">
                             <div class="pane-title">原始文本区</div>
-                            <div class="raw-text" v-text="rawText"></div>
+                            <div class="raw-text" v-text="rawText" data-testid="split-raw-text"></div>
                         </div>
                     </div>
                 </div>
