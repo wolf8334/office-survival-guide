@@ -92,6 +92,13 @@
             <version>${spring-ai.version}</version>
         </dependency>
 
+
+        <!-- Spring MCP Server -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>

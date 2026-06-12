@@ -84,17 +84,34 @@ spring:
         collection-name: ${QDRANT_COLLECTION_NAME}
         use-tls: false
         initialize-schema: true
-    #      vector:
-    #        dimensions: 4096
-    #        distance-type: COSINE_DISTANCE
-    #        index-type: HNSW
-    #        initialize-schema: false
+    #   vector:
+    #     dimensions: 4096
+    #     distance-type: COSINE_DISTANCE
+    #     index-type: HNSW
+    #     initialize-schema: false
     chat:
       memory:
         repository:
           jdbc:
             initialize-schema: never
             platform: mysql
+    mcp:
+      server:
+        enabled: true
+        name: office-survival-guide
+        version: 1.0.0
+        type: SYNC
+        protocol: STREAMABLE
+        instructions: 提供天气和 ETF 行情查询工具
+        annotation-scanner:
+          enabled: true
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+        streamable-http:
+          mcp-endpoint: /mcp
 
 custom:
   code:
@@ -129,6 +146,9 @@ custom:
       max_tokens: 30000
       max-completion-tokens: 30000
       enable_thinking: false
+  weather:
+    base-url: ${HF_URL}
+    api-key: ${HF_KEY}
 
   mineru-url: ${MINERU_URL}
   mineru-backend: pipeline
