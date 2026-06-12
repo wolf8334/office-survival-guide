@@ -7,8 +7,8 @@
     <parent>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-parent</artifactId>
-            <version>3.5.11</version>
-        <relativePath/>
+            <version>4.1.0</version>
+            <relativePath/>
     </parent>
 
     <groupId>com.xhr.springai.officeSurvivalGuide</groupId>
@@ -22,6 +22,7 @@
         <java.version>26</java.version>
         <maven.compiler.source>26</maven.compiler.source>
         <maven.compiler.target>26</maven.compiler.target>
+        <spring-ai.version>2.0.0-RC2</spring-ai.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
@@ -52,26 +53,26 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-tika-document-reader</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <!-- Spring AI -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-anthropic</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-client-chat</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>
@@ -82,13 +83,13 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-model-chat-memory-repository-jdbc</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-pdf-document-reader</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <dependency>
@@ -108,7 +109,7 @@
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-vector-store-qdrant</artifactId>
-            <version>1.1.4</version>
+            <version>${spring-ai.version}</version>
         </dependency>
 
         <!-- Spring 自动装配 -->
@@ -233,7 +234,7 @@
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
-                <version>1.1.4</version>
+                <version>${spring-ai.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

@@ -32,7 +32,7 @@ public class AIConfig {
     @Value("${custom.vl-name}")
     private String vlName;
 
-    @Value("${spring.ai.anthropic.chat.options.model}")
+    @Value("${spring.ai.anthropic.chat.model}")
     private String claudeName;
 
     @Value("${custom.maxMessage}")
@@ -43,47 +43,54 @@ public class AIConfig {
     @Bean("rerankClient")
     public ChatClient reRankChatClient(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {
         log.info("加载向量化专家模型 {}", embeddingName);
-        OpenAiChatOptions options = OpenAiChatOptions.builder().model(embeddingName).build();
-        if (!embeddingName.toLowerCase().contains("gpt")){
-            //GPT不支持stop
-            options =  OpenAiChatOptions.builder().model(embeddingName).stop(List.of("```", "```json")).build();
+
+        OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder().model(embeddingName);
+
+        if (!embeddingName.toLowerCase().contains("gpt")) {
+            optionsBuilder.stop(List.of("```", "```json"));
         }
 
-        return ChatClient.builder(chatModel).clone()
+        return ChatClient.builder(chatModel)
+                .clone()
                 .defaultSystem("你是一位优秀的重排序专家，协助用户完成重排序工作。")
                 .defaultAdvisors(tokenAdvisor)
-//                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory()).build())
-                .defaultOptions(options).build();
+                .defaultOptions(optionsBuilder)
+                .build();
     }
 
     @Bean("vlClient")
     public ChatClient vlClient(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {
         log.info("加载识别专家模型 {}", vlName);
-        OpenAiChatOptions options = OpenAiChatOptions.builder().model(vlName).build();
+
+        OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder().model(vlName);
+
         if (!vlName.toLowerCase().contains("gpt")){
-            //GPT不支持stop
-            options =  OpenAiChatOptions.builder().model(vlName).stop(List.of("```", "```json")).build();
+            optionsBuilder.stop(List.of("```", "```json"));
         }
 
-        return ChatClient.builder(chatModel).clone()
+        return ChatClient.builder(chatModel)
+                .clone()
                 .defaultSystem("你是一位优秀的图片识别专家，协助用户完成图片识别工作。")
                 .defaultAdvisors(tokenAdvisor)
-                .defaultOptions(options).build();
+                .defaultOptions(optionsBuilder)
+                .build();
     }
 
     @Bean("claudeClient")
     public ChatClient claudeClient(@Qualifier("anthropicChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {
         log.info("加载Claude专家模型 {}", claudeName);
-        AnthropicChatOptions options = AnthropicChatOptions.builder().model(claudeName).build();
+        AnthropicChatOptions.Builder optionsBuilder = AnthropicChatOptions.builder().model(claudeName);
+
         if (!claudeName.toLowerCase().contains("gpt")){
-            //GPT不支持stop
-            options =  AnthropicChatOptions.builder().model(claudeName).stopSequences(List.of("```", "```json")).build();
+            optionsBuilder.stopSequences(List.of("```", "```json"));
         }
 
-        return ChatClient.builder(chatModel).clone()
-                .defaultSystem("你是一位优秀的图片识别专家，协助用户完成图片识别工作。")
+        return ChatClient.builder(chatModel)
+                .clone()
+                .defaultSystem("你是一位优秀的业务专家，协助用户完成业务工作。")
                 .defaultAdvisors(tokenAdvisor)
-                .defaultOptions(options).build();
+                .defaultOptions(optionsBuilder)
+                .build();
     }
 
     @Bean("chatMemoryRepository")

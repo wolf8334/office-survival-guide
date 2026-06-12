@@ -212,8 +212,9 @@ public class LLMUtil {
             }
         }
 
-        if (similarDocs != null) {
+        if (similarDocs != null && !similarDocs.isEmpty()) {
             log.info("向量搜索查询完毕，共{}条文档", similarDocs.size());
+
 
             List<Map<String, Object>> bm25 = BM25Search(afterPurified, 50);
 
@@ -230,12 +231,13 @@ public class LLMUtil {
             similarDocs = rerank.rerank(afterPurified, similarDocs);
 
             log.info("重排序后共{}条", similarDocs.size());
-            similarDocs.forEach(this::convertDocumentForPrint);
+            if (!similarDocs.isEmpty()) {
+                similarDocs.forEach(this::convertDocumentForPrint);
+                similarDocs = rerank.getFullDocument(similarDocs);
 
-            similarDocs = rerank.getFullDocument(similarDocs);
-
-            log.info("上下文窗口扩展后共{}条", similarDocs.size());
-            similarDocs.forEach(this::convertDocumentForPrint);
+                log.info("上下文窗口扩展后共{}条", similarDocs.size());
+                similarDocs.forEach(this::convertDocumentForPrint);
+            }
 
             return similarDocs.parallelStream().map(Document::getText).collect(Collectors.joining("\n"));
         }

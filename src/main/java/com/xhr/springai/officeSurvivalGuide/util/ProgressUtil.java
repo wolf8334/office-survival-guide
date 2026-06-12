@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
-import org.springframework.retry.support.RetrySynchronizationManager;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 import reactor.core.publisher.Flux;
@@ -90,10 +89,6 @@ public class ProgressUtil {
 
         if (null == requirement || requirement.isBlank()) {
             return NO_TABLE;
-        }
-
-        if (RetrySynchronizationManager.getContext() != null && RetrySynchronizationManager.getContext().getRetryCount() > 0) {
-            requirement += " 之前生成的句子有SQL语法问题，请仔细检查语法。";
         }
 
         log.info("requirement {}", requirement);

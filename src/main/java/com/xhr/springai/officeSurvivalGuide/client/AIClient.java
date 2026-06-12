@@ -1,7 +1,5 @@
 package com.xhr.springai.officeSurvivalGuide.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xhr.springai.officeSurvivalGuide.bean.LLMRequest;
 import com.xhr.springai.officeSurvivalGuide.service.LLMRequestService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +12,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AIClient {
 
     private final WebClient.Builder webClient;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper objectMapper;
     private final LLMRequestService logService;
 
     public AIResponse chat(AIRequest req) {
@@ -115,8 +115,8 @@ public class AIClient {
                         JsonNode node = objectMapper.readTree(sse.data());
                         JsonNode delta = node.path("choices").path(0).path("delta");
 
-                        String reasoning = delta.path("reasoning_content").asText("");
-                        String content = delta.path("content").asText("");
+                        String reasoning = delta.path("reasoning_content").asString("");
+                        String content = delta.path("content").asString("");
 
                         if (!reasoning.isEmpty()) {
                             fullResponse.append(reasoning);
@@ -193,8 +193,8 @@ public class AIClient {
             JsonNode root = objectMapper.readTree(raw);
             JsonNode choice = root.path("choices").path(0);
 
-            String content = choice.path("message").path("content").asText();
-            String finishReason = choice.path("finish_reason").asText();
+            String content = choice.path("message").path("content").asString();
+            String finishReason = choice.path("finish_reason").asString();
 
             JsonNode usage = root.path("usage");
             long promptTokens = usage.path("prompt_tokens").asLong();
