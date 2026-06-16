@@ -1,9 +1,6 @@
 package com.xhr.springai.officeSurvivalGuide.service;
 
-import com.xhr.springai.officeSurvivalGuide.util.JSONUtil;
-import com.xhr.springai.officeSurvivalGuide.util.LLMUtil;
-import com.xhr.springai.officeSurvivalGuide.util.ProgressUtil;
-import com.xhr.springai.officeSurvivalGuide.util.VectorStoreUtil;
+import com.xhr.springai.officeSurvivalGuide.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -25,6 +22,15 @@ public class HQService {
     private final JSONUtil json;
     private final VectorStoreUtil vector;
     private final RerankService rerank;
+
+    private final Chater toolClient;
+
+    public String toolCall(String prompt) {
+        log.info("toolCall prompt {}", prompt);
+        String ret = toolClient.call(prompt);
+        log.info("toolCall ret {}", ret);
+        return ret;
+    }
 
     public Flux<String> acknowledge(String requirement) {
         return progress.processMessage(requirement);

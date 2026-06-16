@@ -32,6 +32,9 @@ public class AIConfig {
     @Value("${custom.vl-name}")
     private String vlName;
 
+    @Value("${custom.chat.name}")
+    private String chatName;
+
     @Value("${spring.ai.anthropic.chat.model}")
     private String claudeName;
 
@@ -39,6 +42,24 @@ public class AIConfig {
     private int maxMessage;
 
     private final JdbcTemplate jdbcTemplate;
+
+    @Bean("toolClient")
+    public ChatClient toolClient(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {
+        log.info("加载支持工具链的专家模型 {}", chatName);
+
+        OpenAiChatOptions.Builder optionsBuilder = OpenAiChatOptions.builder().model(chatName);
+
+        if (!embeddingName.toLowerCase().contains("gpt")) {
+            optionsBuilder.stop(List.of("```", "```json"));
+        }
+
+        return ChatClient.builder(chatModel)
+                .clone()
+                .defaultSystem("你是一位优秀的支持工具链调用的专家，协助用户完成工作。")
+                .defaultAdvisors(tokenAdvisor)
+                .defaultOptions(optionsBuilder)
+                .build();
+    }
 
     @Bean("rerankClient")
     public ChatClient reRankChatClient(@Qualifier("openAiChatModel") ChatModel chatModel, TokenAdvisor tokenAdvisor) {

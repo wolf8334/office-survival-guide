@@ -2,6 +2,7 @@ package com.xhr.springai.officeSurvivalGuide.mcp.service;
 
 import com.xhr.springai.officeSurvivalGuide.mcp.bean.CurrentWeather;
 import com.xhr.springai.officeSurvivalGuide.mcp.bean.QWeatherCityLookupResponse;
+import com.xhr.springai.officeSurvivalGuide.mcp.bean.QWeatherDailyResponse;
 import com.xhr.springai.officeSurvivalGuide.mcp.bean.QWeatherResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -66,6 +67,32 @@ public class QWeatherService {
                 now.windScale(),
                 now.windSpeed()
         );
+    }
+
+    public QWeatherDailyResponse getFutureWeather(String cityName, String days) {
+        QWeatherCityLookupResponse.Location location = lookupCity(cityName);
+        String locationId = location.id();
+
+        QWeatherDailyResponse response = restClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v7/weather/{days}")
+                        .queryParam("location", locationId)
+                        .queryParam("lang", "zh")
+                        .queryParam("unit", "m")
+                        .build(days))
+                .header("X-QW-Api-Key", apiKey)
+                .retrieve()
+                .body(QWeatherDailyResponse.class);
+
+        if (response == null) {
+            throw new IllegalStateException("和风天气返回为空");
+        }
+
+        if (!"200".equals(response.code())) {
+            throw new IllegalStateException("查询和风天气失败，code=" + response.code());
+        }
+
+        return response;
     }
 
     public QWeatherCityLookupResponse.Location lookupCity(String cityName) {

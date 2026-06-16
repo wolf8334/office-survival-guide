@@ -34,6 +34,11 @@ public class HQController {
         return service.acknowledge(userRequirement);
     }
 
+    @GetMapping("/tools")
+    public String toolCall(@RequestParam String prompt){
+        return service.toolCall(prompt);
+    }
+
     @PostMapping("/summarize")
     public String summarize(@RequestParam("file") MultipartFile file) {
         return service.processFile(file);

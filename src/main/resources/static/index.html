@@ -21,6 +21,7 @@
             .icon-blue  { background: #e3f2fd; }
             .icon-amber { background: #fff8e1; }
             .icon-purple { background: #f3e5f5; }
+            .icon-teal   { background: #e0f2f1; }
         .status-dot {
             display: inline-block; width: 6px; height: 6px;
             border-radius: 50%; background: #2ecc71; margin-right: 5px; vertical-align: middle;
@@ -33,28 +34,28 @@
         <el-header style="height: 48px; background: #fff; border-bottom: 1px solid #e8e6e0; display: flex; align-items: center; padding: 0 20px;">
             <span style="font-size: 14px; font-weight: 500; color: #1a1a1a;">AI 工具平台</span>
         </el-header>
-        <el-main style="display: flex; align-items: center; justify-content: center;">
-            <div style="width: 100%; max-width: 680px;">
-                <div class="hero">
-                    <h1>选择一个工具开始</h1>
-                    <p>基于大语言模型的开发辅助工具集</p>
-                </div>
-                <el-row :gutter="16">
-                    <el-col :xs="24" :sm="6" v-for="item in tools" :key="item.name">
-                        <a :href="item.link" class="card-wrap">
-                            <el-card shadow="hover" :body-style="{ padding: '24px 20px' }">
-                                <div style="display: flex; flex-direction: column; gap: 10px;">
-                                    <div :class="['card-icon', item.iconClass]">{{ item.emoji }}</div>
-                                    <div style="font-size: 14px; font-weight: 500; color: #1a1a1a;">{{ item.name }}</div>
-                                    <div style="font-size: 12px; color: #888; line-height: 1.55;">{{ item.desc }}</div>
-                                    <div style="font-size: 11px; color: #bbb; display: flex; align-items: center; gap: 4px; margin-top: auto;">
-                                        <span class="status-dot"></span>进入
-                                    </div>
+        <el-main style="padding: 40px 24px;">
+            <div style="max-width: 1400px; margin: 0 auto;">
+            <div class="hero">
+                <h1>选择一个工具开始</h1>
+                <p>基于大语言模型的开发辅助工具集</p>
+            </div>
+            <el-row :gutter="24">
+                <el-col :xs="24" :sm="12" :md="6" :lg="4" v-for="item in tools" :key="item.name">
+                    <a :href="item.link" class="card-wrap">
+                        <el-card shadow="hover" :body-style="{ padding: '24px 20px' }">
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div :class="['card-icon', item.iconClass]">{{ item.emoji }}</div>
+                                <div style="font-size: 14px; font-weight: 500; color: #1a1a1a;">{{ item.name }}</div>
+                                <div style="font-size: 12px; color: #888; line-height: 1.55;">{{ item.desc }}</div>
+                                <div style="font-size: 11px; color: #bbb; display: flex; align-items: center; gap: 4px; margin-top: auto;">
+                                    <span class="status-dot"></span>进入
                                 </div>
-                            </el-card>
-                        </a>
-                    </el-col>
-                </el-row>
+                            </div>
+                        </el-card>
+                    </a>
+                </el-col>
+            </el-row>
             </div>
         </el-main>
     </el-container>
@@ -71,6 +72,7 @@
                 { name: '代码智能生成', desc: '描述需求并上传参考文件，自动生成完整的业务代码模块。', emoji: '⚡', iconClass: 'icon-green', link: 'code.html' },
                 { name: '知识库新增', desc: '上传文档文件，解析入库后即可在 RAG 搜索中检索使用。', emoji: '📚', iconClass: 'icon-amber', link: 'upload.html' },
                 { name: '信息查看', desc: '查看大模型调用记录，包括 Token 消耗、耗时等。', emoji: '📊', iconClass: 'icon-purple', link: 'monitor.html' },
+                { name: '工具调用', desc: '输入问题，获取智能解答，支持 Markdown 格式回复。', emoji: '🛠️', iconClass: 'icon-teal', link: 'tools.html' },
             ]);
             return { tools };
         }
