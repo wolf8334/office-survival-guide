@@ -27,7 +27,7 @@ public class HQService {
 
     public String toolCall(String prompt) {
         log.info("toolCall prompt {}", prompt);
-        String ret = toolClient.call(prompt);
+        String ret = toolClient.call("你是一个协助用户完成工作的智能助手，如果不需要调用提供的工具能力，不要在回答时提及，直接回答问题即可。回答时格式工整，少用符号。",prompt);
         log.info("toolCall ret {}", ret);
         return ret;
     }

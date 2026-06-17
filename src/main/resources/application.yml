@@ -61,10 +61,10 @@ spring:
         top_p: 0.7
         max_tokens: 350000
     openai:
-      base-url: https://api.siliconflow.cn/
-      api-key: ${SILICONFLOW_API_KEY}
+      base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api-key: ${BAILIAN_API_KEY}
       chat:
-        model: ${custom.qwen-name}
+        model: qwen3.7-max-2026-06-08
         temperature: 0.1
         top_p: 0.7
         frequency_penalty: 0.2
@@ -115,9 +115,9 @@ spring:
 
 custom:
   code:
-    url: https://api.siliconflow.cn/
-    apiKey: ${SILICONFLOW_API_KEY}
-    name: Qwen/Qwen3.6-27B #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash qwen3-coder-plus
+    url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    apiKey: ${BAILIAN_API_KEY}
+    name: qwen3.7-max-2026-06-08 #anthropic/claude-opus-4.6 Pro/deepseek-ai/DeepSeek-V3.2 deepseek-v4-flash qwen3-coder-plus
     tokens: 30000
     stop:
       - "```"
@@ -131,9 +131,9 @@ custom:
       max-completion-tokens: 30000
       enable_thinking: false
   chat:
-    url: https://api.siliconflow.cn/
-    apiKey: ${SILICONFLOW_API_KEY}
-    name: Qwen/Qwen3.6-27B
+    url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    apiKey: ${BAILIAN_API_KEY}
+    name: qwen3.7-max-2026-06-08
     tokens: 30000
     stop:
       - "```"
